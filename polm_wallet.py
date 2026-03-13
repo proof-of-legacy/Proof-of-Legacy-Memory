@@ -641,6 +641,7 @@ def cmd_balance(args) -> None:
     import urllib.request as _ur, json as _json
     try:
         data = _json.loads(_ur.urlopen(f"http://127.0.0.1:5556/balance?address={addr}").read())
+        sats = data.get("balance_sats", 0)
         print(f"\n  Endereço : {addr}")
         print(f"  Saldo    : {sats / COIN:.8f} PoLM  ({sats} sats)\n")
     except Exception as e:
