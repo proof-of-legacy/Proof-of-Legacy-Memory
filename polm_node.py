@@ -461,6 +461,7 @@ Exemplos:
     parser.add_argument("--port",     type=int, default=DEFAULT_PORT, help=f"Porta P2P (padrão: {DEFAULT_PORT})")
     parser.add_argument("--no-mine",  action="store_true",   help="Inicia sem mineração")
     parser.add_argument("--debug",    action="store_true",   help="Log nível DEBUG")
+    parser.add_argument("--ram-type",  dest="ram_type", default="",  help="Tipo de RAM: DDR2, DDR3, DDR4, DDR5")
     args = parser.parse_args()
 
     if args.debug:
