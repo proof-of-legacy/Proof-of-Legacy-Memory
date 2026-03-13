@@ -394,6 +394,18 @@ class PoLMNode:
         def on_ping(peer: Peer, payload: dict) -> None:
             peer.send(MSG_PONG, {"nonce": payload.get("nonce", 0)})
 
+        @self.peers.on("GET_BALANCE")
+        def on_get_balance(peer: Peer, payload: dict) -> None:
+            addr = payload.get("address", "")
+            bal  = self.bc.utxo.balance(addr, self.bc.height)
+            peer.send("BALANCE", {"balance_sats": bal, "address": addr})
+
+        @self.peers.on("GET_UTXOS")
+        def on_get_utxos(peer: Peer, payload: dict) -> None:
+            addr  = payload.get("address", "")
+            utxos = self.bc.utxo.get_by_address(addr, self.bc.height)
+            peer.send("UTXOS", {"utxos": utxos})
+
         @self.peers.on(MSG_PONG)
         def on_pong(peer: Peer, payload: dict) -> None:
             pass
