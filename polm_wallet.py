@@ -638,13 +638,9 @@ def cmd_balance(args) -> None:
         w    = PoLMWallet.load()
         addr = w.primary_address
 
-    import socket, json as _json
+    import urllib.request as _ur, json as _json
     try:
-        s = socket.create_connection(("127.0.0.1", 5556), timeout=5)
-        import urllib.request as _ur
-        s.close()
         data = _json.loads(_ur.urlopen(f"http://127.0.0.1:5556/balance?address={addr}").read())
-        sats  = data.get("balance_sats", 0)
         print(f"\n  Endereço : {addr}")
         print(f"  Saldo    : {sats / COIN:.8f} PoLM  ({sats} sats)\n")
     except Exception as e:
@@ -669,13 +665,14 @@ def cmd_send(args) -> None:
         return
 
     # Busca UTXOs do nó local
-    import socket, json as _json
+    import urllib.request as _ur, json as _json
     try:
-        s = socket.create_connection(("127.0.0.1", 5556), timeout=5)
-        import urllib.request as _ur
-        s.close()
         data = _json.loads(_ur.urlopen(f"http://127.0.0.1:5556/utxos?address={from_addr}").read())
-        utxos = data.get("utxos", [])
+        utxos_raw = data.get("utxos", [])
+        # Filtra UTXOs maduros
+        import urllib.request as _ur3
+        h = __import__("json").loads(_ur3.urlopen("http://127.0.0.1:5556/height").read())["height"]
+        utxos = [u for u in utxos_raw if not u.get("coinbase") or (h - u["height"]) >= 100]
     except Exception as e:
         print(f"Erro ao conectar ao nó: {e}")
         return
@@ -693,18 +690,11 @@ def cmd_send(args) -> None:
 
     # Envia tx ao nó
     try:
-        s = socket.create_connection(("127.0.0.1", 5556), timeout=5)
-        s.sendall((_json.dumps({"type": "TX", "tx": tx}) + "\n").encode())
-        resp = b""
-        while True:
-            chunk = s.recv(4096)
-            if not chunk:
-                break
-            resp += chunk
-            if b"\n" in resp:
-                break
-        s.close()
-        data = _json.loads(resp.decode().strip())
+        import urllib.request as _ur2
+        req  = _ur2.Request("http://127.0.0.1:5556/tx",
+                           data=_json.dumps(tx).encode(),
+                           headers={"Content-Type": "application/json"})
+        data = _json.loads(_ur2.urlopen(req, timeout=5).read())
         if data.get("accepted"):
             print(f"\n  ✓ Transação enviada!")
             print(f"  TXID : {tx['txid']}")
