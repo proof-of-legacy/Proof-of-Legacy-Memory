@@ -481,7 +481,12 @@ Exemplos:
     threads = max(1, min(args.threads, 8))
 
     # Banner
-    ram_type, ram_mult = detect_ram_type()
+    if args.ram_type:
+        from polm_ram import RAM_MULTIPLIERS
+        ram_type = args.ram_type.upper()
+        ram_mult = RAM_MULTIPLIERS.get(ram_type, 1.0)
+    else:
+        ram_type, ram_mult = detect_ram_type()
     print("\n" + "═" * 62)
     print("   ██████╗  ██████╗ ██╗     ███╗   ███╗")
     print("   ██╔══██╗██╔═══██╗██║     ████╗ ████║")
