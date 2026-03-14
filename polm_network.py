@@ -438,7 +438,7 @@ class PeerManager:
 
     def _save_peers(self) -> None:
         data = [
-            {"ip": p.ip, "port": p.port, "last_seen": p.last_seen}
+            {"ip": p.ip, "port": DEFAULT_PORT, "last_seen": p.last_seen}
             for p in self._peers.values()
             if not self.is_banned(p.ip)
         ]
