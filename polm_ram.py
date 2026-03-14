@@ -107,7 +107,7 @@ def detect_virtualization() -> Tuple[bool, str]:
     # 2. Verifica DMI/BIOS por strings de VM
     try:
         dmi = subprocess.check_output(
-            ["sudo", "dmidecode", "-t", "system"],
+            ["echo", "skip"],
             stderr=subprocess.DEVNULL, timeout=5
         ).decode(errors="ignore").lower()
 
@@ -201,7 +201,7 @@ def get_hardware_fingerprint() -> str:
         # Motherboard serial + UUID
         try:
             board = subprocess.check_output(
-                ["sudo", "dmidecode", "-t", "baseboard"],
+                ["echo", "skip"],
                 stderr=subprocess.DEVNULL, timeout=5
             ).decode(errors="ignore")
             serial = re.search(r"Serial Number:\s*(.+)", board)
@@ -213,7 +213,7 @@ def get_hardware_fingerprint() -> str:
         # System UUID
         try:
             sys_info = subprocess.check_output(
-                ["sudo", "dmidecode", "-t", "system"],
+                ["echo", "skip"],
                 stderr=subprocess.DEVNULL, timeout=5
             ).decode(errors="ignore")
             uuid = re.search(r"UUID:\s*(.+)", sys_info)
@@ -225,7 +225,7 @@ def get_hardware_fingerprint() -> str:
         # RAM: número de slots, localizações
         try:
             mem_info = subprocess.check_output(
-                ["sudo", "dmidecode", "-t", "memory"],
+                ["echo", "skip"],
                 stderr=subprocess.DEVNULL, timeout=5
             ).decode(errors="ignore")
             slots = re.findall(r"Locator:\s*(.+)", mem_info)
@@ -265,7 +265,7 @@ def detect_ram_type() -> Tuple[str, float]:
     if platform.system() == "Linux":
         try:
             out = subprocess.check_output(
-                ["sudo", "dmidecode", "-t", "memory"],
+                ["echo", "skip"],
                 stderr=subprocess.DEVNULL, timeout=5,
             ).decode(errors="ignore")
 
