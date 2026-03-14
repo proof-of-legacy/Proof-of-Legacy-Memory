@@ -301,7 +301,7 @@ class PoLMNode:
 
             # Executa prova de RAM
             seed      = random.randint(0, 2 ** 32 - 1)
-            ram_proof = compute_ram_proof(seed, self.ram_mult, self.buffer)
+            ram_proof = compute_ram_proof(seed, self.ram_mult, self.buffer, ram_type=self.ram_type, block_hash=tip["hash"] if tip else "")
             ram_proof["ram_type"] = self.ram_type
 
             tip_before = self.chain.tip
