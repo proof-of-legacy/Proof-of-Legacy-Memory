@@ -19,8 +19,8 @@ import subprocess
 import time
 from typing import Optional, Tuple
 
-GRAPH_SIZE    = 500_000
-NUM_ROUNDS    = 3
+GRAPH_SIZE    = 100_000   # rounds por prova — RAM latency bound
+NUM_ROUNDS    = 3         # rodadas para variance check
 MIN_VARIANCE  = 0.02
 MAX_VARIANCE  = 0.35
 SCORE_MIN     = 0.1
@@ -126,32 +126,44 @@ def get_buffer() -> bytearray:
     return _buffer
 
 def memory_storm(seed: int, buf: Optional[bytearray] = None) -> Tuple[int, float]:
-    """Prova de latência — acesso não-sequencial com stride variável."""
+    """
+    Prova de latência de RAM física — pointer chasing puro.
+
+    Algoritmo RAM-latency-bound:
+      1. Hash inicial derivado do seed
+      2. A cada iteração: idx = hash % buffer_size
+      3. Lê 32 bytes da posição idx (cache miss garantido — buffer > L3)
+      4. hash = SHA256(hash + bytes_lidos)
+      5. Cada iteração DEPENDE da anterior — impossível paralelizar
+
+    Por que isso mede latência real da RAM?
+      • Buffer 256MB+ > qualquer cache L3 (tipicamente 8-32MB)
+      • Acesso pseudo-aleatório — impossível pré-buscar (prefetch)
+      • Pointer chasing — próximo acesso depende do resultado atual
+      • SHA256 é rápido (~5ns) vs RAM (~15-100ns) — RAM é o gargalo
+
+    DDR2 (~100ns latência) vs DDR4 (~15ns):
+      → DDR2 naturalmente ~6x mais lento = 6x mais poder PoLM
+      → Sem necessidade de multiplicadores artificiais
+    """
     if buf is None:
         buf = get_buffer()
+
     size = len(buf)
-    if size & (size - 1) != 0:
-        ptr = seed % size
-        total = 0
-        stride = (seed >> 8) | 1
-        t0 = time.perf_counter()
-        for i in range(GRAPH_SIZE):
-            ptr    = (ptr * 1_103_515_245 + 12_345 + stride) % size
-            total ^= buf[ptr]
-            if (i & 0xFFF) == 0:
-                stride = ((total * 6_364_136_223_846_793_005 + 1) % size) | 1
-        return total, time.perf_counter() - t0
-    mask   = size - 1
-    ptr    = seed & mask
-    total  = 0
-    stride = (seed >> 8) | 1
+    safe = size - 32          # evita leitura fora do buffer
+    h    = hashlib.sha256(seed.to_bytes(8, "big")).digest()
+
     t0 = time.perf_counter()
-    for i in range(GRAPH_SIZE):
-        ptr    = (ptr * 1_103_515_245 + 12_345 + stride) & mask
-        total ^= buf[ptr]
-        if (i & 0xFFF) == 0:
-            stride = ((total * 6_364_136_223_846_793_005 + 1) & mask) | 1
-    return total, time.perf_counter() - t0
+    for _ in range(GRAPH_SIZE):
+        # Índice derivado do hash atual — pointer chasing
+        idx = int.from_bytes(h[:8], "big") % safe
+        # Lê 32 bytes da RAM física (cache miss garantido)
+        val = bytes(buf[idx:idx + 32])
+        # Mistura — CPU mínimo, RAM é o gargalo
+        h   = hashlib.sha256(h + val).digest()
+
+    checksum = int.from_bytes(h, "big")
+    return checksum, time.perf_counter() - t0
 
 def _check_page_fault_pattern(buf: bytearray) -> float:
     """
