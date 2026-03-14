@@ -400,8 +400,9 @@ def get_epoch_info(height: int) -> dict:
     next_epoch_block = (epoch + 1) * EPOCH_INTERVAL
     blocks_until_next = max(0, next_epoch_block - height)
 
-    allowed = [k for k, v in cfg.items() if k not in ("min_ram_mb",) and v is not None]
-    obsolete = [k for k, v in cfg.items() if k not in ("min_ram_mb",) and v is None]
+    skip = {"min_ram_mb", "_cpu", "_min_ram_by_type"}
+    allowed = [k for k, v in cfg.items() if k not in skip and v is not None]
+    obsolete = [k for k, v in cfg.items() if k not in skip and v is None]
 
     return {
         "epoch":              epoch,
