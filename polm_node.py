@@ -186,6 +186,7 @@ class PoLMNode:
         ram_mb: int = 256,
         port: int = DEFAULT_PORT,
         mine: bool = True,
+        ram_type: str = "",
     ):
         self.miner_address = miner_address
         self.num_threads   = num_threads
@@ -197,7 +198,27 @@ class PoLMNode:
         self.peers   = PeerManager(port)
 
         # RAM
-        self.ram_type, self.ram_mult = detect_ram_type()
+        if ram_type:
+            from polm_ram import RAM_MULTIPLIERS
+            self.ram_type = ram_type.upper()
+            self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
+        else:
+            if ram_type:
+            from polm_ram import RAM_MULTIPLIERS
+            self.ram_type = ram_type.upper()
+            self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
+        else:
+            if ram_type:
+            from polm_ram import RAM_MULTIPLIERS
+            self.ram_type = ram_type.upper()
+            self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
+        else:
+            if ram_type:
+            from polm_ram import RAM_MULTIPLIERS
+            self.ram_type = ram_type.upper()
+            self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
+        else:
+            self.ram_type, self.ram_mult = detect_ram_type()
         self.buffer = init_buffer(ram_mb)
 
         # Estatísticas
@@ -574,6 +595,7 @@ Exemplos:
         ram_mb=args.ram,
         port=args.port,
         mine=not args.no_mine,
+        ram_type=getattr(args, 'ram_type', ''),
     )
 
     def _shutdown(sig, frame):
