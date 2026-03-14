@@ -203,21 +203,6 @@ class PoLMNode:
             self.ram_type = ram_type.upper()
             self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
         else:
-            if ram_type:
-            from polm_ram import RAM_MULTIPLIERS
-            self.ram_type = ram_type.upper()
-            self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
-        else:
-            if ram_type:
-            from polm_ram import RAM_MULTIPLIERS
-            self.ram_type = ram_type.upper()
-            self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
-        else:
-            if ram_type:
-            from polm_ram import RAM_MULTIPLIERS
-            self.ram_type = ram_type.upper()
-            self.ram_mult = RAM_MULTIPLIERS.get(self.ram_type, 1.0)
-        else:
             self.ram_type, self.ram_mult = detect_ram_type()
         self.buffer = init_buffer(ram_mb)
 
