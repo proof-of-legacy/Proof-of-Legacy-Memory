@@ -1,417 +1,308 @@
 """
-polm_explorer.py — PoLM Block Explorer
-=========================================
-Interface web para explorar a blockchain PoLM.
-
-Rotas:
-  GET /                    — página inicial com estatísticas
-  GET /block/<height>      — detalhes de um bloco
-  GET /tx/<txid>           — detalhes de uma transação
-  GET /address/<addr>      — saldo e histórico de um endereço
-  GET /api/stats           — estatísticas em JSON
-  GET /api/chain           — últimos blocos em JSON
-  GET /api/mempool         — transações pendentes
-
-Uso:
-    python3 polm_explorer.py
-    Abra: http://localhost:5000
+PoLM Explorer v3.1
+Web explorer para a blockchain PoLM
+Conecta ao nó central via API REST
 """
 
-import json
-import os
-import sys
-import time
-from typing import Optional
+from flask import Flask, render_template_string, jsonify, request
+import json, time, os
 
-try:
-    from flask import Flask, jsonify, render_template_string, abort
-except ImportError:
-    print("Flask não instalado. Execute: pip install flask")
-    sys.exit(1)
-
-from polm_core import COIN, MAX_SUPPLY_COINS, CHAIN_FILE, UTXO_FILE
-from polm_chain import Blockchain
-
-app   = Flask(__name__)
-chain = Blockchain()
-
-# ═══════════════════════════════════════════════════════════
-# TEMPLATE HTML
-# ═══════════════════════════════════════════════════════════
-
-BASE_HTML = """<!DOCTYPE html>
+EXPLORER_HTML = """<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PoLM Explorer — Proof of Legacy Memory</title>
+<title>PoLM Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:     #0d0f14;
-    --surface:#161b26;
-    --border: #2a3040;
-    --accent: #00d4aa;
-    --accent2:#ff6b35;
-    --text:   #e2e8f0;
-    --muted:  #8896a8;
-    --green:  #22c55e;
-    --red:    #ef4444;
-    --font:   'JetBrains Mono', 'Courier New', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 13px;
-    line-height: 1.6;
-  }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+:root {
+  --bg:      #090e14;
+  --surf:    #0f1923;
+  --surf2:   #162130;
+  --border:  #1e3448;
+  --accent:  #00e5ff;
+  --green:   #00ff88;
+  --amber:   #ffb300;
+  --orange:  #ff6b35;
+  --text:    #c8dff0;
+  --muted:   #4a6a8a;
+  --mono:    'Share Tech Mono', monospace;
+  --disp:    'Orbitron', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;
+  background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(0,229,255,0.015) 40px),
+  repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(0,229,255,0.015) 40px);}
+body::after{content:'';pointer-events:none;position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 3px);z-index:9999;}
 
-  header {
-    border-bottom: 1px solid var(--border);
-    padding: 16px 32px;
-    display: flex;
-    align-items: center;
-    gap: 24px;
-  }
-  .logo {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--accent);
-    letter-spacing: 2px;
-  }
-  .logo span { color: var(--accent2); }
-  nav a {
-    color: var(--muted);
-    margin-right: 20px;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  nav a:hover { color: var(--text); }
+header{border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;gap:20px;
+  background:rgba(15,25,35,0.97);position:sticky;top:0;z-index:100;backdrop-filter:blur(10px);}
+.logo{font-family:var(--disp);font-size:1.3rem;font-weight:900;letter-spacing:.12em;color:var(--accent);
+  text-shadow:0 0 18px rgba(0,229,255,.4);}
+.logo b{color:var(--green)}
+.tagline{font-size:.7rem;color:var(--muted);letter-spacing:.1em}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 7px var(--green);
+  margin-left:auto;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 
-  .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+main{max-width:1300px;margin:0 auto;padding:24px 20px}
 
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin-bottom: 36px;
-  }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-  }
-  .stat-label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-  .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); margin-top: 6px; }
-  .stat-sub   { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:28px}
+.stat{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:14px 18px;
+  position:relative;overflow:hidden;transition:border-color .2s}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:.4}
+.stat:hover{border-color:var(--accent)}
+.stat-label{font-size:.65rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.stat-value{font-family:var(--disp);font-size:1.3rem;font-weight:700;color:var(--accent)}
+.stat-unit{font-size:.65rem;color:var(--muted);margin-top:2px}
 
-  .section-title {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 8px;
-    margin-bottom: 16px;
-  }
+.section-title{font-family:var(--disp);font-size:.7rem;letter-spacing:.2em;color:var(--muted);
+  text-transform:uppercase;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
 
-  table { width: 100%; border-collapse: collapse; }
-  th {
-    text-align: left;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--muted);
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  td {
-    padding: 10px 12px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-  }
-  tr:hover td { background: var(--surface); }
+.leaderboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-bottom:28px}
+.miner-card{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:14px 18px}
+.miner-card.winner{border-color:var(--amber)}
+.miner-name{font-size:.8rem;color:var(--accent);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.miner-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ms{font-size:.7rem}
+.ms-label{color:var(--muted)}
+.ms-value{color:var(--text);font-weight:700}
+.badge{display:inline-block;padding:2px 7px;border-radius:3px;font-size:.65rem;font-weight:700;letter-spacing:.05em}
+.ddr2{background:rgba(255,107,53,.12);color:var(--orange);border:1px solid rgba(255,107,53,.25)}
+.ddr3{background:rgba(255,179,0,.1);color:var(--amber);border:1px solid rgba(255,179,0,.25)}
+.ddr4{background:rgba(0,229,255,.08);color:var(--accent);border:1px solid rgba(0,229,255,.2)}
+.ddr5{background:rgba(0,255,136,.08);color:var(--green);border:1px solid rgba(0,255,136,.2)}
 
-  .hash {
-    font-family: var(--font);
-    font-size: 11px;
-    color: var(--muted);
-  }
-  .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  .badge-ddr2 { background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed44; }
-  .badge-ddr3 { background: #065f4622; color: #6ee7b7; border: 1px solid #065f4644; }
-  .badge-ddr4 { background: #1e3a5f22; color: #60a5fa; border: 1px solid #1e3a5f44; }
-  .badge-ddr5 { background: #7c1d1322; color: #fca5a5; border: 1px solid #7c1d1344; }
+.chain-table{width:100%;border-collapse:collapse;margin-bottom:28px}
+.chain-table th{text-align:left;padding:9px 12px;color:var(--muted);font-size:.62rem;
+  letter-spacing:.14em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+.chain-table td{padding:9px 12px;border-bottom:1px solid rgba(30,52,72,.4);vertical-align:middle}
+.chain-table tr:hover td{background:rgba(0,229,255,.025);cursor:pointer}
+.hash{color:var(--accent);font-size:.75rem}
+.hash-muted{color:var(--muted);font-size:.7rem}
 
-  .supply-bar-wrap {
-    background: var(--border);
-    border-radius: 4px;
-    height: 6px;
-    overflow: hidden;
-    margin-top: 8px;
-  }
-  .supply-bar {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
-    border-radius: 4px;
-    transition: width 1s ease;
-  }
+.boost-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:28px}
+.boost-card{background:var(--surf);border:1px solid var(--border);border-radius:6px;padding:14px;text-align:center}
+.boost-type{font-family:var(--disp);font-size:1.1rem;font-weight:700;margin-bottom:4px}
+.boost-mult{font-size:1.5rem;font-weight:700;margin-bottom:4px}
+.boost-desc{font-size:.62rem;color:var(--muted)}
+.boost-card.b2 .boost-type,.boost-card.b2 .boost-mult{color:var(--orange)}
+.boost-card.b3 .boost-type,.boost-card.b3 .boost-mult{color:var(--amber)}
+.boost-card.b4 .boost-type,.boost-card.b4 .boost-mult{color:var(--accent)}
+.boost-card.b5 .boost-type,.boost-card.b5 .boost-mult{color:var(--green)}
 
-  .block-detail { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 24px; }
-  .detail-row { display: flex; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 16px; }
-  .detail-key { width: 160px; color: var(--muted); font-size: 11px; text-transform: uppercase; flex-shrink: 0; }
-  .detail-val { color: var(--text); word-break: break-all; }
+.search-row{display:flex;gap:8px;margin-bottom:20px}
+.search-row input{flex:1;background:var(--surf);border:1px solid var(--border);border-radius:4px;
+  padding:9px 13px;color:var(--text);font-family:var(--mono);font-size:.82rem;outline:none}
+.search-row input:focus{border-color:var(--accent)}
+.search-row button{background:rgba(0,229,255,.08);border:1px solid var(--accent);color:var(--accent);
+  padding:9px 18px;border-radius:4px;cursor:pointer;font-family:var(--disp);font-size:.68rem;
+  letter-spacing:.1em;transition:background .2s}
+.search-row button:hover{background:rgba(0,229,255,.16)}
 
-  .polm-amount { color: var(--green); font-weight: 700; }
-  .fee-amount  { color: var(--accent2); }
+footer{border-top:1px solid var(--border);padding:18px 28px;text-align:center;
+  color:var(--muted);font-size:.68rem;letter-spacing:.07em}
 
-  footer {
-    border-top: 1px solid var(--border);
-    padding: 20px 32px;
-    color: var(--muted);
-    font-size: 11px;
-    text-align: center;
-    margin-top: 60px;
-  }
+@media(max-width:700px){
+  .boost-grid{grid-template-columns:repeat(2,1fr)}
+  .chain-table th:nth-child(3),.chain-table td:nth-child(3),
+  .chain-table th:nth-child(6),.chain-table td:nth-child(6){display:none}
+}
 </style>
 </head>
 <body>
 <header>
-  <div class="logo">Po<span>LM</span></div>
-  <nav>
-    <a href="/">Dashboard</a>
-    <a href="/blocks">Blocos</a>
-    <a href="/api/stats">API</a>
-  </nav>
+  <div>
+    <div class="logo">PoLM <b>Explorer</b></div>
+    <div class="tagline">Proof of Legacy Memory · RAM-Latency-Bound PoW</div>
+  </div>
+  <div class="dot" title="Node online"></div>
 </header>
-{% block body %}{% endblock %}
-<footer>PoLM — Proof of Legacy Memory &nbsp;|&nbsp; Supply máximo: 32.000.000 PoLM &nbsp;|&nbsp; DDR2 vive.</footer>
-</body></html>"""
 
-INDEX_HTML = BASE_HTML.replace("{% block body %}{% endblock %}", """
-<div class="container">
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-label">Altura</div>
-      <div class="stat-value">{{ stats.height }}</div>
-      <div class="stat-sub">blocos confirmados</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Supply</div>
-      <div class="stat-value">{{ "%.0f"|format(stats.supply) }}</div>
-      <div class="stat-sub">de 32.000.000 PoLM ({{ "%.3f"|format(stats.supply_pct) }}%)</div>
-      <div class="supply-bar-wrap"><div class="supply-bar" style="width:{{ stats.supply_pct }}%"></div></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Dificuldade</div>
-      <div class="stat-value">{{ stats.difficulty }}</div>
-      <div class="stat-sub">bits de PoW</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Último hash</div>
-      <div class="stat-value" style="font-size:13px">{{ stats.tip_hash[:14] }}…</div>
-      <div class="stat-sub">bloco mais recente</div>
-    </div>
+<main>
+  <div class="search-row">
+    <input id="q" placeholder="Block height or hash (64 chars)…" onkeydown="if(event.key==='Enter')search()">
+    <button onclick="search()">SEARCH</button>
   </div>
 
-  <div class="section-title">Últimos blocos</div>
-  <table>
-    <thead>
-      <tr>
-        <th>Altura</th>
-        <th>Hash</th>
-        <th>Minerador</th>
-        <th>RAM</th>
-        <th>Score</th>
-        <th>TXs</th>
-        <th>Recompensa</th>
-        <th>Tempo</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for b in blocks %}
-      <tr>
-        <td><a href="/block/{{ b.height }}">{{ b.height }}</a></td>
-        <td><span class="hash"><a href="/block/{{ b.height }}">{{ b.hash[:20] }}…</a></span></td>
-        <td><span class="hash">{{ b.miner[:20] }}…</span></td>
-        <td>
-          {% set ram = b.get('ram_type', b.get('ram', 'AUTO')) %}
-          <span class="badge badge-{{ ram.lower() }}">{{ ram }}</span>
-        </td>
-        <td>{{ "%.2f"|format(b.get('ram_score', 0)) }}</td>
-        <td>{{ b.transactions|length }}</td>
-        <td class="polm-amount">{{ "%.4f"|format(b.transactions[0].outputs[0].value / 100000000) }}</td>
-        <td class="hash">{{ b.timestamp | ts_ago }}</td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</div>
-""")
+  <div class="stats" id="stats"></div>
 
-BLOCK_HTML = BASE_HTML.replace("{% block body %}{% endblock %}", """
-<div class="container">
-  <div class="section-title">Bloco #{{ block.height }}</div>
-  <div class="block-detail">
-    <div class="detail-row"><div class="detail-key">Hash</div><div class="detail-val hash">{{ block.hash }}</div></div>
-    <div class="detail-row"><div class="detail-key">Altura</div><div class="detail-val">{{ block.height }}</div></div>
-    <div class="detail-row"><div class="detail-key">Anterior</div><div class="detail-val hash"><a href="/block/{{ block.height - 1 }}">{{ block.prev_hash[:32] }}…</a></div></div>
-    <div class="detail-row"><div class="detail-key">Merkle Root</div><div class="detail-val hash">{{ block.merkle_root }}</div></div>
-    <div class="detail-row"><div class="detail-key">Timestamp</div><div class="detail-val">{{ block.timestamp | ts_fmt }}</div></div>
-    <div class="detail-row"><div class="detail-key">Dificuldade</div><div class="detail-val">{{ block.difficulty }} bits</div></div>
-    <div class="detail-row"><div class="detail-key">Nonce</div><div class="detail-val">{{ block.nonce }}</div></div>
-    <div class="detail-row"><div class="detail-key">Minerador</div><div class="detail-val hash">{{ block.miner }}</div></div>
-    <div class="detail-row"><div class="detail-key">RAM</div><div class="detail-val">{{ block.get('ram_type', block.get('ram', '—')) }} | score={{ "%.4f"|format(block.get('ram_score', 0)) }} | latência={{ "%.4f"|format(block.get('ram_latency', 0)) }}s</div></div>
-    <div class="detail-row"><div class="detail-key">Transações</div><div class="detail-val">{{ block.transactions|length }}</div></div>
+  <p class="section-title">Miner leaderboard</p>
+  <div class="leaderboard" id="leaderboard"></div>
+
+  <p class="section-title">Legacy boost multipliers</p>
+  <div class="boost-grid">
+    <div class="boost-card b2"><div class="boost-type">DDR2</div><div class="boost-mult">2.20×</div><div class="boost-desc">Max legacy bonus</div></div>
+    <div class="boost-card b3"><div class="boost-type">DDR3</div><div class="boost-mult">1.60×</div><div class="boost-desc">Strong legacy bonus</div></div>
+    <div class="boost-card b4"><div class="boost-type">DDR4</div><div class="boost-mult">1.00×</div><div class="boost-desc">Baseline</div></div>
+    <div class="boost-card b5"><div class="boost-type">DDR5</div><div class="boost-mult">0.85×</div><div class="boost-desc">Modern penalty</div></div>
   </div>
 
-  <br>
-  <div class="section-title">Transações</div>
-  <table>
-    <thead><tr><th>TXID</th><th>Tipo</th><th>Outputs</th><th>Total</th></tr></thead>
-    <tbody>
-    {% for tx in block.transactions %}
-    <tr>
-      <td><span class="hash"><a href="/tx/{{ tx.txid }}">{{ tx.txid[:24] }}…</a></span></td>
-      <td>{% if tx.inputs[0].txid == '0'*64 %}<span class="badge badge-ddr3">COINBASE</span>{% else %}TX{% endif %}</td>
-      <td>{{ tx.outputs|length }}</td>
-      <td class="polm-amount">{{ "%.8f"|format(tx.outputs|sum(attribute='value') / 100000000) }} PoLM</td>
-    </tr>
-    {% endfor %}
-    </tbody>
+  <p class="section-title">Latest blocks</p>
+  <table class="chain-table">
+    <thead><tr>
+      <th>#</th><th>Hash</th><th>Prev</th><th>Miner</th><th>RAM</th>
+      <th>Score</th><th>Latency</th><th>Reward</th><th>Age</th>
+    </tr></thead>
+    <tbody id="blocks"></tbody>
   </table>
-</div>
-""")
+</main>
 
-# ═══════════════════════════════════════════════════════════
-# TEMPLATE FILTERS
-# ═══════════════════════════════════════════════════════════
+<footer>PoLM v3.0.0 &nbsp;·&nbsp; Max supply: 32,000,000 POLM &nbsp;·&nbsp; Experimental Testnet</footer>
 
-@app.template_filter("ts_ago")
-def ts_ago(ts):
-    delta = int(time.time() - ts)
-    if delta < 60:    return f"{delta}s atrás"
-    if delta < 3600:  return f"{delta//60}m atrás"
-    if delta < 86400: return f"{delta//3600}h atrás"
-    return f"{delta//86400}d atrás"
+<script>
+const NODE = '';
 
-@app.template_filter("ts_fmt")
-def ts_fmt(ts):
-    return time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime(ts))
+async function load() {
+  try {
+    const [sum, blks, miners] = await Promise.all([
+      fetch(NODE+'/api/summary').then(r=>r.json()),
+      fetch(NODE+'/api/blocks?limit=20').then(r=>r.json()),
+      fetch(NODE+'/api/miners').then(r=>r.json()),
+    ]);
+    renderStats(sum);
+    renderLeaderboard(miners);
+    renderBlocks(blks);
+  } catch(e) { console.error(e); }
+}
 
-# ═══════════════════════════════════════════════════════════
-# ROTAS
-# ═══════════════════════════════════════════════════════════
+function renderStats(s) {
+  const items = [
+    {label:'Block Height', value:s.height.toLocaleString(), unit:'blocks'},
+    {label:'Total Supply', value:Number(s.total_supply).toLocaleString('en',{maximumFractionDigits:0}), unit:`/ 32,000,000 POLM`},
+    {label:'Next Reward', value:s.next_reward.toFixed(2), unit:'POLM'},
+    {label:'Difficulty', value:s.difficulty, unit:'leading zeros'},
+    {label:'Epoch', value:s.epoch, unit:'100,000 blocks/epoch'},
+    {label:'Block Time', value:s.block_time+'s', unit:'target'},
+    {label:'Chain Tip', value:s.tip_hash.slice(0,10)+'…', unit:'sha3-256'},
+  ];
+  document.getElementById('stats').innerHTML = items.map(i=>`
+    <div class="stat">
+      <div class="stat-label">${i.label}</div>
+      <div class="stat-value">${i.value}</div>
+      <div class="stat-unit">${i.unit}</div>
+    </div>`).join('');
+}
 
-@app.route("/")
-def index():
-    tip     = chain.tip or {}
-    supply  = chain.total_supply() / COIN
-    blocks  = list(reversed(chain.get_recent_blocks(20)))
+function ramBadge(r) {
+  const cls = {DDR2:'ddr2',DDR3:'ddr3',DDR4:'ddr4',DDR5:'ddr5'}[r]||'ddr4';
+  return `<span class="badge ${cls}">${r}</span>`;
+}
 
-    stats = {
-        "height":     chain.height,
-        "supply":     supply,
-        "supply_pct": supply / MAX_SUPPLY_COINS * 100,
-        "difficulty": tip.get("difficulty", 0),
-        "tip_hash":   tip.get("hash", "—"),
-    }
-    return render_template_string(INDEX_HTML, stats=stats, blocks=blocks)
+function renderLeaderboard(miners) {
+  const sorted = Object.entries(miners).sort((a,b)=>b[1].blocks-a[1].blocks);
+  document.getElementById('leaderboard').innerHTML = sorted.map(([id,s],i)=>{
+    const boost = {DDR2:2.2,DDR3:1.6,DDR4:1.0,DDR5:0.85}[s.ram]||1.0;
+    return `<div class="miner-card ${i===0?'winner':''}">
+      <div class="miner-name">${ramBadge(s.ram)} &nbsp;${id}</div>
+      <div class="miner-stats">
+        <div class="ms"><div class="ms-label">Blocks</div><div class="ms-value">${s.blocks}</div></div>
+        <div class="ms"><div class="ms-label">Reward</div><div class="ms-value">${s.reward.toFixed(1)} POLM</div></div>
+        <div class="ms"><div class="ms-label">Avg latency</div><div class="ms-value">${s.avg_latency.toFixed(0)}ns</div></div>
+        <div class="ms"><div class="ms-label">Boost</div><div class="ms-value">${boost}×</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
 
+function renderBlocks(blocks) {
+  const now = Math.floor(Date.now()/1000);
+  if (!blocks.length) {
+    document.getElementById('blocks').innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">No blocks yet</td></tr>';
+    return;
+  }
+  document.getElementById('blocks').innerHTML = blocks.map(b=>{
+    const age = now - b.timestamp;
+    const ageStr = age<60?age+'s':age<3600?Math.floor(age/60)+'m':Math.floor(age/3600)+'h';
+    return `<tr>
+      <td style="color:var(--green);font-family:var(--disp)">${b.height}</td>
+      <td><span class="hash">${b.block_hash.slice(0,14)}…</span></td>
+      <td><span class="hash-muted">${b.prev_hash.slice(0,10)}…</span></td>
+      <td style="font-size:.72rem;color:var(--text)">${b.miner_id.slice(0,16)}…</td>
+      <td>${ramBadge(b.ram_type)}</td>
+      <td style="color:var(--amber)">${Number(b.score).toLocaleString('en',{maximumFractionDigits:0})}</td>
+      <td style="color:var(--muted)">${Number(b.latency_ns).toFixed(0)}ns</td>
+      <td style="color:var(--green)">${b.reward.toFixed(1)}</td>
+      <td style="color:var(--muted)">${ageStr} ago</td>
+    </tr>`;
+  }).join('');
+}
 
-@app.route("/block/<int:height>")
-def block_detail(height: int):
-    block = chain.get_block(height)
-    if not block:
-        abort(404)
-    return render_template_string(BLOCK_HTML, block=block)
+function search() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  if (/^\d+$/.test(q)) { window.location.href = `/block/${q}`; return; }
+  if (q.length === 64) { window.location.href = `/block/hash/${q}`; return; }
+  alert('Enter a valid block height or 64-char hash');
+}
 
+load();
+setInterval(load, 8000);
+</script>
+</body>
+</html>
+"""
 
-@app.route("/address/<addr>")
-def address_detail(addr: str):
-    utxos   = chain.utxo.get_by_address(addr, chain.height)
-    balance = sum(u["value"] for u in utxos) / COIN
-    # Estatísticas de mineradores
-    miners = {}
-    for b in bc[-500:]:
-        m = b.get('miner', '')
-        r = b.get('ram_type', b.get('ram_proof', {}) if isinstance(b.get('ram_proof'), dict) else 'AUTO')
-        if isinstance(r, dict):
-            r = r.get('ram_type', 'AUTO')
-        s = b.get('ram_score', 0)
-        if m not in miners:
-            miners[m] = {'blocks': 0, 'ram_type': r, 'total_score': 0}
-        miners[m]['blocks'] += 1
-        miners[m]['total_score'] += s
+def create_explorer(node_url: str = "http://localhost:6060", port: int = 5050):
+    import urllib.request
 
-    miner_stats = sorted([
-        {'miner': m[:20], 'blocks': v['blocks'], 'ram_type': v['ram_type'],
-         'avg_score': round(v['total_score'] / max(v['blocks'], 1), 2)}
-        for m, v in miners.items()
-    ], key=lambda x: -x['blocks'])
+    app = Flask("polm-explorer")
 
-    return jsonify({
-        "address": addr,
-        "balance": balance,
-        "utxos":   utxos,
-    })
+    def fetch(path):
+        try:
+            r = urllib.request.urlopen(f"{node_url}{path}", timeout=5)
+            return json.loads(r.read())
+        except:
+            return None
 
+    @app.route("/")
+    def index():
+        return render_template_string(EXPLORER_HTML)
 
-@app.route("/tx/<txid>")
-def tx_detail(txid: str):
-    for block in reversed(chain.get_recent_blocks(1000)):
-        for tx in block.get("transactions", []):
-            if tx.get("txid") == txid:
-                return jsonify({**tx, "confirmed_in_block": block["height"]})
-    abort(404)
+    @app.route("/api/summary")
+    def api_summary():
+        data = fetch("/")
+        if not data:
+            return jsonify({"error": "node offline"}), 503
+        return jsonify(data)
 
+    @app.route("/api/blocks")
+    def api_blocks():
+        limit = request.args.get("limit", 20)
+        data = fetch(f"/chain?limit={limit}")
+        return jsonify(data or [])
 
-@app.route("/api/stats")
-def api_stats():
-    tip    = chain.tip or {}
-    supply = chain.total_supply() / COIN
-    return jsonify({
-        "height":       chain.height,
-        "tip_hash":     tip.get("hash", ""),
-        "difficulty":   tip.get("difficulty", 0),
-        "supply_polm":  round(supply, 8),
-        "supply_pct":   round(supply / MAX_SUPPLY_COINS * 100, 6),
-        "max_supply":   MAX_SUPPLY_COINS,
-        "timestamp":    time.time(),
-    })
+    @app.route("/api/miners")
+    def api_miners():
+        data = fetch("/miners")
+        return jsonify(data or {})
 
+    @app.route("/block/<int:h>")
+    def block_by_height(h):
+        data = fetch(f"/block/{h}")
+        if data:
+            return jsonify(data)
+        return jsonify({"error": "not found"}), 404
 
-@app.route("/api/chain")
-def api_chain():
-    blocks = chain.get_recent_blocks(50)
-    return jsonify(blocks)
+    @app.route("/block/hash/<h>")
+    def block_by_hash(h):
+        # search through recent blocks
+        blocks = fetch("/chain?limit=200") or []
+        for b in blocks:
+            if b.get("block_hash") == h:
+                return jsonify(b)
+        return jsonify({"error": "not found"}), 404
 
+    print(f"\n[Explorer] PoLM Explorer v3.1")
+    print(f"[Explorer] Node: {node_url}")
+    print(f"[Explorer] http://localhost:{port}\n")
+    app.run(host="0.0.0.0", port=port)
 
-@app.route("/api/block/<int:height>")
-def api_block(height: int):
-    block = chain.get_block(height)
-    if not block:
-        abort(404)
-    return jsonify(block)
-
-
-# ═══════════════════════════════════════════════════════════
-# MAIN
-# ═══════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    chain.initialize()
-    print("\n  PoLM Explorer — http://localhost:5000\n")
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    import sys
+    node = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:6060"
+    port = int(sys.argv[2]) if len(sys.argv) > 2 else 5050
+    create_explorer(node_url=node, port=port)
