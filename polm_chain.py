@@ -518,9 +518,7 @@ class Blockchain:
             return False, f"hash inválido"
 
         # Dificuldade
-        expected_diff = calculate_next_difficulty(
-            self.get_recent_blocks(150), prev
-        )
+        expected_diff = calculate_next_difficulty(self.get_recent_blocks(150))
         if block["difficulty"] != expected_diff:
             return False, f"dificuldade inválida: {block['difficulty']} esperado {expected_diff}"
 
