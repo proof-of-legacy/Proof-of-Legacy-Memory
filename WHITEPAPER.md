@@ -1,227 +1,274 @@
-# PoLM — Proof of Legacy Memory
-## Whitepaper Oficial v1.0
-
-**Fundador:** Aluisio Fernandes "Aluminium"  
-**Data:** 2025  
-**Website:** polm.io (em breve)  
-**Repositório:** github.com/proof-of-legacy  
+# PoLM-X v2 — Proof of Legacy Memory (Extended)
+## Whitepaper — Memory-Hard + Latency-Hard Consensus
 
 ---
 
-## Resumo Executivo
-
-PoLM (Proof of Legacy Memory) é uma blockchain descentralizada com um mecanismo de consenso único no mundo: **Prova de Latência de RAM**. Diferente do Bitcoin (que favorece quem tem mais hardware novo e caro) ou do Ethereum (que favorece quem tem mais dinheiro), o PoLM inverte a lógica — **hardware mais antigo minera mais**.
-
-O PoLM não é apenas uma criptomoeda. É uma **infraestrutura global de registro de propriedade e identidade**, onde qualquer bem físico, digital ou jurídico pode ser registrado de forma imutável, verificável e permanente — sem depender de cartório, governo ou empresa centralizada.
+> *"Every old computer deserves a second life."*
 
 ---
 
-## 1. O Problema
+## Abstract
 
-O mundo moderno tem três grandes falhas em registro de propriedade:
-
-**1.1 Centralização**  
-Registros de imóveis, contratos, patentes e identidades dependem de instituições centralizadas (cartórios, governos, bancos). Uma falha, corrupção ou desastre pode apagar ou falsificar registros.
-
-**1.2 Exclusão Digital**  
-Blockchain atual (Bitcoin, Ethereum) exige hardware novo e caro para participar. Bilhões de computadores antigos são descartados todo ano, gerando lixo eletrônico, mesmo quando ainda funcionam perfeitamente.
-
-**1.3 Barreiras de Acesso**  
-Registrar uma propriedade em cartório custa caro, é lento e só funciona dentro de fronteiras nacionais. Não existe um registro universal de propriedade acessível a qualquer pessoa no mundo.
+**PoLM-X** is a Proof-of-Work consensus algorithm that simultaneously enforces two independent hardware constraints: **Memory-Hard** (large RAM allocation) and **Latency-Hard** (real memory access latency). By combining both properties, PoLM-X creates a mining environment where legacy hardware (DDR2/DDR3 systems) remains economically competitive, while ASIC development becomes prohibitively difficult.
 
 ---
 
-## 2. A Solução PoLM
+## 1. Motivation
 
-### 2.1 Proof of Legacy Memory (Prova de Memória Legada)
+Most Proof-of-Work algorithms optimize for one dimension:
 
-O PoLM usa a **latência da RAM** como prova de trabalho. RAM mais antiga (DDR2, DDR3) tem latência maior — e isso se torna uma **vantagem de mineração**:
+| Algorithm | Bottleneck | Winner |
+|-----------|-----------|--------|
+| SHA-256   | Compute   | ASIC   |
+| Ethash    | VRAM bandwidth | GPU |
+| RandomX   | Cache + CPU | CPU  |
+| Chia      | Storage   | HDD/SSD farm |
+| **PoLM-X** | **RAM Size + RAM Latency** | **Legacy CPU** |
 
-| Tipo de RAM | Multiplicador | Exemplo de hardware |
-|-------------|--------------|---------------------|
-| DDR2        | 2.5x         | PCs de 2004-2009    |
-| DDR3        | 1.8x         | PCs de 2007-2014    |
-| DDR4        | 1.0x         | PCs de 2014-2020    |
-| DDR5        | 0.6x         | PCs de 2021+        |
-
-Um computador com DDR2 de 2005 minera **2.5x mais** que um PC novo com DDR5. Isso é revolucionário.
-
-### 2.2 Proteção Anti-Trapaça
-
-O PoLM usa múltiplas camadas de segurança para garantir que apenas hardware físico real possa minerar:
-
-- **Detecção de VM** — VMware, VirtualBox, QEMU, WSL, Docker, KVM e outros são detectados e bloqueados
-- **Fingerprint de Hardware** — cada prova é vinculada ao hardware físico específico (motherboard, CPU, RAM slots)
-- **Validação de Latência** — a latência medida é comparada com o esperado para o tipo de RAM declarado. Quem declara DDR2 mas tem DDR4 é penalizado
-- **Seed derivado do bloco** — impossível reutilizar provas antigas (anti-replay)
-
-### 2.3 Registro Universal de Propriedade
-
-Qualquer pessoa pode registrar na blockchain PoLM:
-
-**Bens Físicos:**
-- Imóveis (casas, terrenos, apartamentos)
-- Veículos (carros, motos, caminhões)
-- Máquinas e equipamentos industriais
-- Obras de arte e colecionáveis
-
-**Bens Empresariais:**
-- Contratos digitais
-- Participação societária
-- Patentes e marcas
-- Licenças e concessões
-
-**Bens Digitais:**
-- Documentos e certificados
-- Direitos autorais
-- Código-fonte e projetos tecnológicos
-- Identidade digital
-
-Cada registro é:
-- **Imutável** — não pode ser alterado após confirmação
-- **Verificável** — qualquer pessoa pode verificar em qualquer lugar do mundo
-- **Permanente** — existe enquanto a rede existir
-- **Barato** — taxa de registro em PoLM, sem intermediários
+The consequence is inevitable centralization: whoever builds the best ASIC or GPU farm dominates. PoLM-X breaks this by making the bottleneck something that **cannot easily be miniaturized**: the physical latency of DRAM cells.
 
 ---
 
-## 3. Tokenomics
+## 2. Protocol Overview
 
-| Parâmetro | Valor |
-|-----------|-------|
-| Supply máximo | 32.000.000 PoLM |
-| Recompensa inicial | 50 PoLM/bloco |
-| Halving | A cada 210.000 blocos |
-| Tempo alvo | 60 segundos/bloco |
-| Símbolo | POLM |
-| Decimais | 8 (como Bitcoin) |
-| Unidade mínima | 1 satoshi = 0.00000001 POLM |
+### 2.1 Architecture
 
-### Distribuição estimada:
-- Mineradores (hardware legado): ~95%
-- Fundador (blocos genesis + primeiros blocos): ~5%
+```
+Seed
+ ↓
+Memory DAG generation (seeded per epoch + prev_hash)
+ ↓
+Random Memory Walk (100,000 steps)
+ ↓
+Latency Measurement (per-access ns timing)
+ ↓
+Hash Chain (sha3-256, each step depends on previous)
+ ↓
+Latency Proof + Memory Proof embedded in header
+ ↓
+Block validation (PoW prefix + proof checks)
+```
 
----
+### 2.2 Key Components
 
-## 4. Casos de Uso
-
-### 4.1 Para Governos
-Prefeituras e governos estaduais podem usar a rede PoLM como camada de registro imutável para:
-- Registro de imóveis e terrenos
-- Certidões de nascimento e óbito
-- Contratos públicos e licitações
-- Diplomas e certificados educacionais
-
-### 4.2 Para Empresas
-- Registro de patentes e propriedade intelectual
-- Contratos inteligentes entre empresas
-- Rastreabilidade de cadeia de suprimentos
-- Certificação de autenticidade de produtos
-
-### 4.3 Para Pessoas Físicas
-- Compra e venda de imóveis sem cartório
-- Registro de obras artísticas e musicais
-- Testamentos e heranças digitais
-- Identidade digital universal
-
-### 4.4 Para Mineradores
-- Dar utilidade a computadores antigos
-- Gerar renda com hardware considerado obsoleto
-- Participar de uma rede global descentralizada
+| Component | Description |
+|-----------|-------------|
+| Memory DAG | Large pseudorandom buffer seeded from epoch + chain tip |
+| Random Memory Walk | Unpredictable access pattern; each address derived from previous hash |
+| Hash Chain | sha3-256 chain: `H(i) = sha3(H(i-1) ∥ DAG[pos])` |
+| Latency Proof | Average ns per memory access, measured and embedded in block |
+| Legacy Boost | Per-generation RAM multiplier rewarding older hardware |
+| Saturation Penalty | Reduces score for high thread counts |
 
 ---
 
-## 5. Arquitetura Técnica
+## 3. Memory DAG
 
-### 5.1 Consenso
-- Algoritmo: Proof of Legacy Memory (PoLM)
-- Dificuldade: ajuste automático a cada 144 blocos
-- Proteção contra reorganização: máximo 100 blocos
-- Anti-VM: detecção em múltiplas camadas
+The DAG is a large byte buffer, deterministically generated from:
 
-### 5.2 Transações
-- Modelo UTXO (como Bitcoin)
-- Assinatura ECDSA secp256k1
-- Anti replay-attack via CHAIN_ID
-- Maturação de coinbase: 100 blocos
+```
+dag_seed = sha3_256( "polmx:" ∥ epoch ∥ ":" ∥ prev_hash[:32] )
+```
 
-### 5.3 Rede
-- Protocolo P2P proprietário
-- Porta padrão: 5555
-- Máximo de peers: 125
-- Versão do protocolo: PoLM/1.1
+The DAG is **epoch-stable**: miners within the same epoch share the same DAG. This allows pre-generation and caching but still requires full RAM allocation.
 
-### 5.4 Registro de Ativos (em desenvolvimento)
-- Transações especiais tipo ASSET_REGISTER
-- Hash do documento + metadados na blockchain
-- NFT nativo para bens únicos
-- API REST para integração com sistemas externos
+### DAG Size per Epoch
+
+| Epoch | DAG Size | Min RAM |
+|-------|----------|---------|
+| 0     | 2 GB     | 4 GB    |
+| 1     | 2.125 GB | 5 GB    |
+| 2     | 2.25 GB  | 6 GB    |
+| 5     | 2.625 GB | 9 GB    |
+| 10    | 3.25 GB  | 14 GB   |
+
+Epoch interval: **100,000 blocks** (~34.7 days at 30s block time).
 
 ---
 
-## 6. Roadmap
+## 4. Random Memory Walk
 
-### Fase 1 — Mainnet (2025) ✅ Concluído
-- [x] Blockchain funcional
-- [x] Mineração por latência de RAM
-- [x] Rede P2P com 2+ nós
-- [x] Transferências funcionais
-- [x] Explorer web
+The core PoW operation. Each step:
 
-### Fase 2 — Segurança (2025) 🔄 Em andamento
-- [x] Detecção de VM
-- [x] Fingerprint de hardware
-- [ ] Validação ECDSA completa
-- [ ] Auditoria de segurança
+1. Compute `pos = int(H[:8], little-endian) % DAG_size`
+2. Read 32 bytes from `DAG[pos]`
+3. `H_new = sha3_256(H_prev ∥ DAG[pos])`
+4. Measure access time in nanoseconds
+5. Repeat 100,000 times
 
-### Fase 3 — Registro de Ativos (2026)
-- [ ] Transações ASSET_REGISTER
-- [ ] Interface web de registro
-- [ ] API para integração governamental
-- [ ] NFTs nativos
-
-### Fase 4 — Ecossistema (2026)
-- [ ] Listagem em exchanges
-- [ ] Aplicativo móvel
-- [ ] SDK para desenvolvedores
-- [ ] Parceria com prefeituras piloto
+Properties:
+- **Unpredictable access**: each address depends on the previous hash result
+- **No prefetch**: hardware prefetch cannot anticipate next address
+- **Cache-defeating**: 2+ GB DAG far exceeds L1/L2/L3 cache
+- **Sequential dependency**: steps cannot be parallelized
 
 ---
 
-## 7. Propriedade Intelectual e Licença
+## 5. Legacy Boost System
 
-PoLM é um projeto proprietário criado e de propriedade de **Aluisio Fernandes "Aluminium"**.
+PoLM-X applies a multiplier based on detected RAM generation. Older RAM is physically slower (higher latency), so the protocol rewards this inherent disadvantage:
 
-O código-fonte é distribuído sob licença **PoLM Proprietary License v1.0**, que permite:
-- ✅ Uso pessoal para mineração
-- ✅ Estudo do código
-- ✅ Contribuições via pull request aprovado
+| RAM Type | Multiplier | Rationale |
+|----------|-----------|-----------|
+| DDR2     | **2.20×** | ~80–200ns latency — maximum legacy bonus |
+| DDR3     | **1.60×** | ~50–100ns latency — strong legacy bonus |
+| DDR4     | **1.00×** | ~30–70ns latency — baseline |
+| DDR5     | **0.85×** | ~20–50ns latency — modern penalty |
 
-E proíbe:
-- ❌ Cópia do projeto sob outro nome
-- ❌ Modificação do algoritmo de consenso
-- ❌ Uso comercial sem autorização do fundador
-- ❌ Criação de forks sem aprovação
-
-**"PoLM", "Proof of Legacy Memory" e "Aluminium"** são marcas do fundador.
+RAM type is detected via `dmidecode` (Linux) or OS API, preventing spoofing.
 
 ---
 
-## 8. Sobre o Fundador
+## 6. Saturation Penalty
 
-**Aluisio Fernandes**, conhecido como **"Aluminium"**, é o criador e fundador da rede PoLM. A ideia nasceu da observação de que hardware antigo ainda tem valor real — e que o mundo precisa de uma infraestrutura de registro de propriedade que seja verdadeiramente descentralizada, acessível e permanente.
+High thread counts provide diminishing returns and are penalized:
 
-*"Hardware antigo não morre, ele minera. DDR2 tem valor. Cada ciclo de RAM é prova de vida."*  
-— Aluisio Fernandes "Aluminium", mensagem do bloco genesis PoLM
+| Threads | Penalty |
+|---------|---------|
+| 1–4     | 1.00×   |
+| 5–8     | 0.90×   |
+| 9–16    | 0.80×   |
+| 17+     | 0.70×   |
+
+This discourages large multi-socket server mining rigs and keeps single-socket legacy hardware competitive.
+
+### Final Score Formula
+
+```
+score = work_units × legacy_boost × saturation_penalty
+```
 
 ---
 
-## Contato
+## 7. Block Structure
 
-- GitHub: github.com/proof-of-legacy
-- Website: polm.io (em breve)
-- Email: aluminium@polm.io (em breve)
+```
+Block {
+    height         : uint64
+    prev_hash      : sha3-256 hex (64 chars)
+    timestamp      : unix seconds
+    nonce          : uint64
+    miner_id       : string (address)
+    ram_type       : DDR2 | DDR3 | DDR4 | DDR5
+    thread_count   : uint8
+    epoch          : uint32
+    difficulty     : uint8  (leading zero nibbles)
+    dag_seed       : sha3-256 hex
+    latency_proof  : float (avg ns per access)
+    memory_proof   : sha3-256 hex (final walk hash)
+    score          : float
+    transactions   : [ Transaction ]
+    block_hash     : sha3-256( header_bytes ∥ tx_json )
+}
+```
 
 ---
 
-*© 2025 Aluisio Fernandes "Aluminium". Todos os direitos reservados.*
+## 8. Security Analysis
+
+### 8.1 Anti-ASIC
+- DAG grows each epoch — custom chips need large, re-flashable DRAM arrays
+- Latency is **physical** — cannot be compressed on silicon
+- Access pattern is unpredictable — cannot pipeline memory reads
+- Hash chain prevents parallelism — each step depends on previous
+
+### 8.2 Anti-GPU
+GPUs have high memory bandwidth but **higher DRAM latency** (GDDR6: ~80–120ns). The latency-hard constraint neutralizes bandwidth advantage.
+
+### 8.3 Anti-Cache Exploit
+If all accesses resolve from cache (< 5ns avg), the latency proof fails validation and the block is rejected by all honest nodes.
+
+### 8.4 Anti-Fake RAM
+`dmidecode` reads SPD (Serial Presence Detect) chips directly on the DIMM. These cannot be spoofed in software. RAMDisk systems will exhibit anomalously low latency and fail the proof threshold.
+
+### 8.5 Anti-Replay
+Each block commits to `prev_hash`, `timestamp`, `nonce`, and `miner_id`. Replaying a valid block is impossible because the chain tip changes.
+
+### 8.6 Anti-Fork (rapid fork attack)
+The network enforces:
+- Monotonic timestamps
+- Height sequence validation
+- Difficulty continuity
+
+---
+
+## 9. Economics
+
+| Parameter     | Value                        |
+|---------------|------------------------------|
+| Symbol        | POLM                         |
+| Max Supply    | 32,000,000 (32-bit era tribute) |
+| Block Time    | 30 seconds                   |
+| Initial Reward | 5.0 POLM                    |
+| Halving       | Every 4 years (~4,204,800 blocks) |
+| Difficulty Retarget | Every 144 blocks       |
+| Retarget Window | ±25% per window            |
+
+### Supply Schedule
+
+| Year | Reward | Cumulative Supply |
+|------|--------|------------------|
+| 1    | 5.0    | ~5.25M           |
+| 4    | 5.0    | ~21M             |
+| 5    | 2.5    | ~22.3M           |
+| 8    | 2.5    | ~24.7M           |
+| 12   | 1.25   | ~27.5M           |
+
+---
+
+## 10. Expected Mining Competitiveness
+
+Approximate relative performance (normalized to DDR4 i5 = 1.0):
+
+| Hardware               | Score Multiplier | Notes |
+|------------------------|-----------------|-------|
+| Core 2 Duo + DDR2      | ~1.76×          | Very competitive |
+| Athlon II + DDR3       | ~1.28×          | Competitive |
+| i5 2nd gen + DDR3      | ~1.44×          | Good |
+| i5 8th gen + DDR4      | ~1.00×          | Baseline |
+| Ryzen 9 + DDR5 (16c)   | ~0.60×          | Heavy penalty |
+| Xeon 32c + DDR4        | ~0.70×          | Thread penalty |
+
+Max advantage of modern over legacy: **~2–3×** (vs. 20–100× in SHA-256 or Ethash).
+
+---
+
+## 11. Network Components
+
+| Component | File | Description |
+|-----------|------|-------------|
+| Core Engine | `polm_x_core.py` | DAG, walk, chain, miner |
+| Node | `polm_x_node.py` | P2P + REST API |
+| Wallet | `polm_x_wallet.py` | ECDSA keys + signing |
+| Explorer | `polm_x_explorer.py` | Web UI |
+
+---
+
+## 12. Comparison to PoLM v1
+
+| Feature | PoLM v1 | PoLM-X v2 |
+|---------|---------|-----------|
+| Memory constraint | RAM minimum | RAM size + latency |
+| DAG | Basic | Epoch-growing, hash-expanded |
+| Latency proof | Measured | Measured + block-embedded + validated |
+| Block structure | Basic | Full header with memory/latency proofs |
+| Wallet | Basic | ECDSA secp256k1 |
+| Explorer | Flask basic | Full retro-terminal UI |
+| Anti-fake-RAM | dmidecode | dmidecode + latency threshold |
+| Difficulty | Simple | LWMA-style ±25% cap |
+
+---
+
+## 13. Roadmap
+
+- **v2.0** — Testnet: core engine, node, wallet, explorer ✓
+- **v2.1** — P2P gossip protocol (libp2p-style)
+- **v2.2** — SPV light client
+- **v2.3** — Multi-threaded parallel mining (per-nonce DAG walk)
+- **v3.0** — Mainnet genesis
+
+---
+
+*PoLM-X is experimental software. Testnet only. Not financial advice.*
+
+**Repository**: https://github.com/proof-of-legacy/Proof-of-Legacy-Memory
