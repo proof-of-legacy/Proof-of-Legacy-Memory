@@ -1,59 +1,21 @@
-PoLM Proprietary License v1.0
-==============================
+MIT License
 
-Copyright (c) 2025 Aluisio Fernandes "Aluminium"
-All rights reserved.
+Copyright (c) 2026 Proof of Legacy Memory Contributors
 
-"PoLM", "Proof of Legacy Memory", and "Aluminium" are trademarks
-of Aluisio Fernandes.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-TERMS AND CONDITIONS
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-1. GRANT OF LICENSE
-   Subject to the terms of this License, the copyright holder grants
-   you a non-exclusive, non-transferable, limited license to:
-   a) Use the software for personal mining on physical hardware
-   b) Study the source code for educational purposes
-   c) Submit contributions via approved pull requests
-
-2. RESTRICTIONS
-   You may NOT, without prior written permission from the copyright holder:
-   a) Copy, fork, or rebrand this project under a different name
-   b) Modify the consensus algorithm (Proof of Legacy Memory)
-   c) Use this software for commercial purposes
-   d) Create derivative blockchain projects based on this code
-   e) Remove or alter copyright notices or this license
-   f) Distribute modified versions of this software
-   g) Use the names "PoLM", "Proof of Legacy Memory", or "Aluminium"
-      in derivative works
-
-3. HARDWARE REQUIREMENT
-   This software is designed exclusively for physical hardware.
-   Running PoLM in virtual machines, containers, emulators, or any
-   non-physical environment is prohibited and technically blocked.
-
-4. CONTRIBUTIONS
-   By submitting a contribution (pull request, patch, suggestion),
-   you agree to assign all intellectual property rights of that
-   contribution to Aluisio Fernandes "Aluminium".
-
-5. DISCLAIMER
-   THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
-   THE COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY DAMAGES ARISING
-   FROM THE USE OF THIS SOFTWARE.
-
-6. TERMINATION
-   This license is automatically terminated if you violate any of
-   its terms. Upon termination, you must destroy all copies of the
-   software in your possession.
-
-7. GOVERNING LAW
-   This license shall be governed by the laws of Brazil.
-
-For permissions beyond the scope of this license, contact:
-aluminium@polm.io
-
----
-Aluisio Fernandes "Aluminium"
-Founder, Proof of Legacy Memory (PoLM)
-2025
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

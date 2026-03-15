@@ -1,16 +1,42 @@
-polm_wallet.json
-polm_wallet_backup.json
-polm_chain.db
-polm_chain.db.tmp
-polm_utxo.db
-polm_utxo.db.tmp
-polm_dag.json
-polm_peers.json
-blockchain.json
-polm_chain.json
-wallet.json
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+
+# PoLM chain data
+*.json
+!package.json
+
+# Wallet keys (NEVER commit)
+*wallet*.json
+*wallet*.key
+miner_addr*.txt
+
+# Logs
 *.log
-*.tmp
-*.bak
+*.log.*
+/tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+*~
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Flask
+instance/
+.webassets-cache
