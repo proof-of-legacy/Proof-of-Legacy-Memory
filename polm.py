@@ -43,8 +43,8 @@ class RAMType(Enum):
 # Boost calibrado para DDR2 ≈ DDR4 (dados reais testnet Mar 2026)
 # DDR2 ~6800ns, DDR4 ~1200ns → ratio ~5.7x compensado pelo boost
 BOOST = {
-    RAMType.DDR2: 6.00, RAMType.DDR3: 2.80,
-    RAMType.DDR4: 1.00, RAMType.DDR5: 0.70,
+    RAMType.DDR2: 10.00, RAMType.DDR3: 5.00,
+    RAMType.DDR4: 1.00, RAMType.DDR5: 0.00,
     RAMType.UNKNOWN: 1.00,
 }
 
