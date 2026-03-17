@@ -38,3 +38,11 @@ miner_address.txt
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Chain and wallet data files
+polm_chain*.json
+polmx_chain*.json
+polm_peers.json
+polm_wallet*.json
+*.json
+!package.json
