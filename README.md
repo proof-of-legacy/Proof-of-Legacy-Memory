@@ -3,7 +3,7 @@
 > **The first RAM-latency-bound Proof-of-Work consensus algorithm.**  
 > Giving computational relevance back to legacy hardware.
 
-[![Version](https://img.shields.io/badge/version-3.1.0-00e5ff?style=flat-square&labelColor=0d1520)](.)
+[![Version](https://img.shields.io/badge/version-4.0.0-00e5ff?style=flat-square&labelColor=0d1520)](.)
 [![Status](https://img.shields.io/badge/status-testnet-ffb300?style=flat-square&labelColor=0d1520)](.)
 [![Python](https://img.shields.io/badge/python-3.9%2B-00ff88?style=flat-square&labelColor=0d1520)](.)
 [![License](https://img.shields.io/badge/license-MIT-white?style=flat-square&labelColor=0d1520)](LICENSE)
@@ -14,22 +14,22 @@
 
 Most cryptocurrencies reward whoever has the most powerful hardware. PoLM flips this: the bottleneck is **real DRAM latency** — a physical property that cannot be miniaturized, parallelized, or easily optimized with ASICs.
 
-A **Core 2 Duo from 2006 with DDR2** leads the network against modern i5/i7 machines.
+A **Core 2 Duo from 2006 with DDR2** leads the network against modern i5 12th gen machines with 16 threads.
 
 ---
 
 ## Proven in the real world
 
-Testnet running since March 15, 2026 — **459+ blocks mined across 4 hardware generations:**
+Testnet running since March 15, 2026 — **139+ blocks mined across 4 hardware generations in the latest session:**
 
 | Miner | CPU | RAM | Latency | Boost | Blocks | Share |
 |-------|-----|-----|---------|-------|--------|-------|
-| **POLMBE9E…** | **Core 2 Duo, 2t** | **DDR2** | **~3900 ns** | **10×** | **221** | **48.1%** 🏆 |
-| POLM_Aluisio | i5 12th gen, 16t | DDR4 | ~1089 ns | 1× (0.65 pen.) | 160 | 34.9% |
-| POLM6837… | i5 7th gen, 4t | DDR4 | ~1856 ns | 1× | 50 | 10.9% |
-| POLM_AMD… | AMD, 2t | DDR3 | ~17886 ns | 5× | 28 | 6.1% |
+| **POLMBE9E…** | **Core 2 Duo, 2t** | **DDR2** | **~3750 ns** | **10×** | **53** | **38.1%** 🏆 |
+| POLM_Aluisio | i5 12th gen, 16t | DDR4 | ~1060 ns | 1× (0.65 pen.) | 43 | 30.9% |
+| POLM6837… | i5 7th gen, 4t | DDR4 | ~1705 ns | 1× | 22 | 15.8% |
+| POLM_AMD… | AMD, 2t | DDR3 | ~3452 ns | 8× | 21 | 15.1% |
 
-**Key result**: a 2006 Core 2 Duo with DDR2 leads the network with **48% of all blocks** — beating modern 12th gen Intel with 16 threads.
+**Key result**: a 2006 Core 2 Duo with DDR2 leads the network with **38% of all blocks** — beating modern 12th gen Intel with 16 threads. All 4 RAM generations compete within a 2.5× range (vs 100× in traditional PoW).
 
 ---
 
@@ -55,12 +55,12 @@ submit() → validate → add to chain
 
 ## Legacy Boost Multipliers
 
-Calibrated from real testnet data:
+Calibrated from real testnet data (March 2026):
 
 | RAM Type | Multiplier | Measured Latency | Walk Steps |
 |----------|-----------|-----------------|-----------|
 | DDR2 | **10×** | ~3700–8000 ns | 80 |
-| DDR3 | **5×** | ~1500–18000 ns | 150 |
+| DDR3 | **8×** | ~1500–18000 ns | 150 |
 | DDR4 | 1× | ~900–1900 ns | 500 |
 | DDR5 | 0.5× | ~500–900 ns | 700 |
 
