@@ -248,27 +248,56 @@ footer{padding:40px 32px;border-top:1px solid var(--b1);
   <div class="boost-grid">
     <div class="boost-card bc-ddr2">
       <div class="bc-ram">DDR2</div>
-      <div class="bc-mult">10×</div>
-      <div class="bc-desc">~3500–8000 ns</div>
-      <div class="bc-badge badge-max">max legacy</div>
+      <div class="bc-mult">12×</div>
+      <div class="bc-desc">~3500–8000 ns · now</div>
+      <div class="bc-badge badge-max">max legacy yr 0–2</div>
     </div>
     <div class="boost-card bc-ddr3">
       <div class="bc-ram">DDR3</div>
-      <div class="bc-mult">8×</div>
-      <div class="bc-desc">~1500–4000 ns</div>
-      <div class="bc-badge badge-ok">legacy bonus</div>
+      <div class="bc-mult">10×</div>
+      <div class="bc-desc">~1500–4000 ns · now</div>
+      <div class="bc-badge badge-ok">strong legacy yr 0–4</div>
     </div>
     <div class="boost-card bc-ddr4">
       <div class="bc-ram">DDR4</div>
-      <div class="bc-mult">1×</div>
-      <div class="bc-desc">~900–1900 ns</div>
-      <div class="bc-badge badge-base">baseline</div>
+      <div class="bc-mult">1×→8×</div>
+      <div class="bc-desc">grows each halving</div>
+      <div class="bc-badge badge-base">dominates yr 6–8</div>
     </div>
     <div class="boost-card bc-ddr5">
       <div class="bc-ram">DDR5</div>
-      <div class="bc-mult">0.5×</div>
-      <div class="bc-desc">~500–900 ns</div>
-      <div class="bc-badge badge-pen">penalized</div>
+      <div class="bc-mult">0.5×→10×</div>
+      <div class="bc-desc">grows each halving</div>
+      <div class="bc-badge badge-pen">dominates yr 10–12</div>
+    </div>
+  </div>
+
+  <!-- HARDWARE ROADMAP -->
+  <div style="background:var(--s1);border:1px solid var(--b1);border-radius:12px;padding:32px;margin-top:32px">
+    <div class="section-label" style="text-align:center">Hardware Evolution</div>
+    <h2 style="text-align:center;margin-bottom:8px">The RAM Mining Revolution</h2>
+    <p style="text-align:center;color:var(--t2);font-size:.88rem;margin-bottom:28px;max-width:600px;margin-left:auto;margin-right:auto">
+      Every 2 years, the DAG doubles. By year 12, you'll need 256GB of RAM —
+      forcing a new hardware category: <strong style="color:var(--cyan)">dedicated RAM mining motherboards</strong>,
+      just like GPU boards transformed SHA-256 mining.
+    </p>
+    <div style="overflow-x:auto">
+    <table style="font-size:.78rem">
+      <thead><tr>
+        <th>Year</th><th>Halving</th><th>DAG</th><th>Min RAM</th>
+        <th>DDR2</th><th>DDR3</th><th>DDR4</th><th>DDR5</th><th>DDR6</th><th>Note</th>
+      </tr></thead>
+      <tbody>
+        <tr style="background:rgba(251,191,36,.03)"><td style="color:var(--cyan)">0–2</td><td>1</td><td>256MB</td><td>4GB</td><td style="color:#fb923c">12×</td><td style="color:#fbbf24">10×</td><td>1×</td><td style="color:var(--t3)">0.5×</td><td style="color:var(--t3)">0.3×</td><td>DDR2 dominates</td></tr>
+        <tr><td>2–4</td><td>2</td><td>512MB</td><td>8GB</td><td style="color:#fb923c">10×</td><td style="color:#fbbf24">8×</td><td style="color:var(--cyan)">4×</td><td>2×</td><td style="color:var(--t3)">0.5×</td><td>DDR2 still leads</td></tr>
+        <tr><td>4–6</td><td>3</td><td>1GB</td><td>16GB</td><td>6×</td><td>5×</td><td style="color:var(--cyan)">6×</td><td style="color:var(--amber)">4×</td><td>1×</td><td>Competition opens</td></tr>
+        <tr><td>6–8</td><td>4</td><td>2GB</td><td>32GB</td><td>3×</td><td>3×</td><td style="color:var(--cyan)">8×</td><td style="color:var(--amber)">6×</td><td>2×</td><td>DDR4 takes lead</td></tr>
+        <tr><td>8–10</td><td>5</td><td>4GB</td><td>64GB</td><td>2×</td><td>2×</td><td>6×</td><td style="color:var(--purple)">8×</td><td>4×</td><td>DDR5 rises</td></tr>
+        <tr><td>10–12</td><td>6</td><td>8GB</td><td>128GB</td><td style="color:var(--t3)">1×</td><td style="color:var(--t3)">1×</td><td>4×</td><td style="color:var(--purple)">10×</td><td style="color:var(--green)">8×</td><td>DDR5 dominates</td></tr>
+        <tr style="background:rgba(34,211,238,.03)"><td style="color:var(--amber)">12–14</td><td style="color:var(--amber)">7</td><td style="color:var(--amber)">16GB</td><td style="color:var(--amber)">256GB</td><td style="color:var(--t3)">0.5×</td><td style="color:var(--t3)">0.5×</td><td>3×</td><td>8×</td><td style="color:var(--cyan)">12×</td><td style="color:var(--amber)">⚡ RAM board needed!</td></tr>
+        <tr style="background:rgba(239,68,68,.02)"><td style="color:var(--red)">14+</td><td style="color:var(--red)">8+</td><td style="color:var(--red)">32GB+</td><td style="color:var(--red)">512GB+</td><td style="color:var(--t3)">0.2×</td><td style="color:var(--t3)">0.2×</td><td>2×</td><td>6×</td><td style="color:var(--cyan)">10×</td><td style="color:var(--red)">New hardware market</td></tr>
+      </tbody>
+    </table>
     </div>
   </div>
 </section>

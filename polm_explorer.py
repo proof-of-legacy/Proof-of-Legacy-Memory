@@ -9,7 +9,7 @@ Founder : @aluisiofer  |  Project : @polm2026
 from flask import Flask, render_template_string, jsonify, request, Response
 import json, time, urllib.request
 
-VERSION   = "2.0.0"
+VERSION   = "2.1.0"
 WEBSITE   = "https://polm.com.br"
 GITHUB    = "https://github.com/proof-of-legacy/Proof-of-Legacy-Memory"
 TWITTER_P = "https://x.com/polm2026"
@@ -255,10 +255,10 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
       <div class="sec">
         <div class="st">Legacy boost</div>
         <div class="bgrid">
-          <div class="bc b2"><div class="bt">DDR2</div><div class="bm">10×</div><div class="bs">~3500–8000 ns</div><div class="bpen" style="color:var(--green)">max legacy</div></div>
-          <div class="bc b3"><div class="bt">DDR3</div><div class="bm">8×</div><div class="bs">~1500–4000 ns</div><div class="bpen" style="color:var(--amber)">legacy bonus</div></div>
-          <div class="bc b4"><div class="bt">DDR4</div><div class="bm">1×</div><div class="bs">~900–1900 ns</div><div class="bpen" style="color:var(--cyan)">baseline</div></div>
-          <div class="bc b5"><div class="bt">DDR5</div><div class="bm">0.5×</div><div class="bs">~500–900 ns</div><div class="bpen" style="color:var(--red)">penalized</div></div>
+          <div class="bc b2"><div class="bt">DDR2</div><div class="bm">12×</div><div class="bs">~3500–8000 ns</div><div class="bpen" style="color:var(--green)">max legacy now</div></div>
+          <div class="bc b3"><div class="bt">DDR3</div><div class="bm">10×</div><div class="bs">~1500–4000 ns</div><div class="bpen" style="color:var(--amber)">strong legacy</div></div>
+          <div class="bc b4"><div class="bt">DDR4</div><div class="bm">1×</div><div class="bs">~900–1900 ns</div><div class="bpen" style="color:var(--cyan)">baseline now</div></div>
+          <div class="bc b5"><div class="bt">DDR5</div><div class="bm">0.5×</div><div class="bs">~500–900 ns</div><div class="bpen" style="color:var(--red)">penalized now</div></div>
         </div>
       </div>
     </div>
@@ -334,20 +334,24 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
   <div class="sec">
     <div class="st">Boost table — validated testnet (816 blocks)</div>
     <div class="bgrid">
-      <div class="bc b2"><div class="bt">DDR2</div><div class="bm">10×</div><div class="bs">52.4% testnet share</div><div class="bpen" style="color:var(--green)">Core2Duo 2006 ✓</div></div>
-      <div class="bc b3"><div class="bt">DDR3</div><div class="bm">8×</div><div class="bs">7.6% testnet share</div><div class="bpen" style="color:var(--amber)">Legacy bonus ✓</div></div>
-      <div class="bc b4"><div class="bt">DDR4</div><div class="bm">1×</div><div class="bs">40.1% testnet share</div><div class="bpen" style="color:var(--cyan)">Baseline ✓</div></div>
-      <div class="bc b5"><div class="bt">DDR5</div><div class="bm">0.5×</div><div class="bs">Modern penalty</div><div class="bpen" style="color:var(--red)">Speed penalized ✗</div></div>
+      <div class="bc b2"><div class="bt">DDR2</div><div class="bm">12×</div><div class="bs">Halving 1 — max</div><div class="bpen" style="color:var(--green)">Core2Duo 2006 ✓</div></div>
+      <div class="bc b3"><div class="bt">DDR3</div><div class="bm">10×</div><div class="bs">Halving 1 — strong</div><div class="bpen" style="color:var(--amber)">Legacy bonus ✓</div></div>
+      <div class="bc b4"><div class="bt">DDR4</div><div class="bm">1×→8×</div><div class="bs">Grows each halving</div><div class="bpen" style="color:var(--cyan)">Dominates yr 6 ✓</div></div>
+      <div class="bc b5"><div class="bt">DDR5</div><div class="bm">0.5×→10×</div><div class="bs">Grows each halving</div><div class="bpen" style="color:var(--purple)">Dominates yr 10 ✓</div></div>
     </div>
   </div>
   <div class="sec">
     <div class="st">Halving schedule</div>
-    <table><thead><tr><th>Period</th><th>Height range</th><th>Reward</th><th>Approx year</th></tr></thead>
+    <table><thead><tr><th>Period</th><th>Height range</th><th>Reward</th><th>Year</th><th>RAM / DAG</th></tr></thead>
     <tbody>
-      <tr><td style="color:var(--cyan)">1</td><td>0 – 4,199,999</td><td style="color:var(--green)">5.0 POLM</td><td>Year 1–4</td></tr>
-      <tr><td>2</td><td>4.2M – 8.4M</td><td>2.5 POLM</td><td>Year 5–8</td></tr>
-      <tr><td>3</td><td>8.4M – 12.6M</td><td>1.25 POLM</td><td>Year 9–12</td></tr>
-      <tr><td>4+</td><td>continuing…</td><td>halving…</td><td>→ 32M total</td></tr>
+      <tr><td style="color:var(--cyan)">1</td><td>0 – 2,099,999</td><td style="color:var(--green)">5.0 POLM</td><td>Year 0–2</td><td>DAG 256MB · DDR2=12× · min 4GB</td></tr>
+      <tr><td>2</td><td>2.1M – 4.2M</td><td>2.5 POLM</td><td>Year 2–4</td><td>DAG 512MB · DDR4=4× · min 8GB</td></tr>
+      <tr><td>3</td><td>4.2M – 6.3M</td><td>1.25 POLM</td><td>Year 4–6</td><td>DAG 1GB · DDR4=6× · min 16GB</td></tr>
+      <tr><td>4</td><td>6.3M – 8.4M</td><td>0.625 POLM</td><td>Year 6–8</td><td>DAG 2GB · DDR5=6× · min 32GB</td></tr>
+      <tr><td>5</td><td>8.4M – 10.5M</td><td>0.3125 POLM</td><td>Year 8–10</td><td>DAG 4GB · DDR5=8× · min 64GB</td></tr>
+      <tr><td>6</td><td>10.5M – 12.6M</td><td>0.156 POLM</td><td>Year 10–12</td><td>DAG 8GB · DDR5=10× · min 128GB</td></tr>
+      <tr><td style="color:var(--amber)">7</td><td>12.6M – 14.7M</td><td>0.078 POLM</td><td>Year 12–14</td><td style="color:var(--amber)">DAG 16GB · DDR6=12× · min 256GB ← RAM board!</td></tr>
+      <tr><td style="color:var(--red)">8+</td><td>14.7M+</td><td>decreasing</td><td>Year 14+</td><td style="color:var(--red)">DAG 32GB+ · DDR7=12× · min 512GB ← new market</td></tr>
     </tbody></table>
   </div>
   <div class="sec">

@@ -45,15 +45,49 @@ from typing import Optional, List, Dict, Set, Tuple
 from flask import Flask, jsonify, request
 
 # ─────────────────────────────────────────────────────────────────
+# ANTI-MULTI-MINING: 1 IP = 1 active miner
+# Each IP can only have ONE active miner per address.
+# The founder address can connect from multiple IPs (maintenance).
+# ─────────────────────────────────────────────────────────────────
+_active_miners: Dict[str, str] = {}   # ip → miner_address
+_miner_ips:     Dict[str, str] = {}   # miner_address → ip
+_anti_mine_lock = threading.Lock()
+
+def register_miner(ip: str, address: str, founder: str) -> Tuple[bool, str]:
+    """Register a miner. Returns (allowed, reason).
+    Rules:
+    - 1 IP can only mine with 1 address
+    - 1 address can only mine from 1 IP
+    - Founder address bypasses IP restriction (maintenance)
+    """
+    if address == founder:
+        return True, "founder"   # founder can connect from anywhere
+    with _anti_mine_lock:
+        existing_ip  = _miner_ips.get(address)
+        existing_addr = _active_miners.get(ip)
+        if existing_ip and existing_ip != ip:
+            return False, f"address already mining from {existing_ip}"
+        if existing_addr and existing_addr != address:
+            return False, f"IP already mining with {existing_addr}"
+        _active_miners[ip]      = address
+        _miner_ips[address]     = ip
+    return True, "ok"
+
+def unregister_miner(ip: str, address: str):
+    with _anti_mine_lock:
+        _active_miners.pop(ip, None)
+        _miner_ips.pop(address, None)
+
+# ─────────────────────────────────────────────────────────────────
 # MAINNET CONSTANTS
 # ─────────────────────────────────────────────────────────────────
-VERSION             = "1.2.0"
+VERSION             = "1.3.0"
 SYMBOL              = "POLM"
 NETWORK             = "mainnet"
 WEBSITE             = "https://polm.com.br"
 MAX_SUPPLY          = 32_000_000
 INITIAL_REWARD      = 5.0
-HALVING_INTERVAL    = 4_200_000       # ~4 years at 30s/block
+HALVING_INTERVAL    = 2_100_000       # ~2 years at 30s/block
 BLOCK_TIME          = 30              # seconds
 DIFF_WINDOW         = 144             # blocks per retarget
 DIFF_CLAMP          = 0.25            # ±25% max adjustment
@@ -61,20 +95,17 @@ EPOCH_BLOCKS        = 100_000
 DAG_BASE_MB         = 256
 DAG_GROWTH_MB       = 64
 WALK_STEPS_MAIN     = 100_000
-GENESIS_TIME        = 1773793850
-FOUNDER_ADDRESS     = "POLMD872771E5F0017C5B5C08D353B5E7B4B"  # set at genesis
+GENESIS_TIME        = 1773877659
+FOUNDER_ADDRESS     = "POLMD872771E5F0017C5B5C08D353B5E7B4B"
 FOUNDER_TWITTER     = "https://x.com/aluisiofer"
 PROJECT_TWITTER     = "https://x.com/polm2026"
-FOUNDER_LOCK        = 5_256_000
-GENESIS_MSG         = "Legacy hardware deserves a second life — PoLM Genesis, March 2026, polm.com.br"
-FOUNDER_NAME        = "Aluisio Fernandes (Aluminium)"       # ~5 years
+FOUNDER_LOCK        = 5_256_000       # ~5 years
 DEFAULT_PORT        = 6060
 MIN_FEE             = 0.0001
+MAX_MINERS_PER_IP   = 1        # 1 miner per IP — prevents multi-instance cheating
+FOUNDER_IPS_ALLOWED = True     # founder can run maintenance miners
 BASELINE_NS         = 1000.0          # DDR4 reference latency
 BOOST_ALPHA         = 0.8
-
-# Static boost table — validated on testnet (816 blocks)
-STATIC_BOOST = {"DDR2": 10.0, "DDR3": 8.0, "DDR4": 1.0, "DDR5": 0.5}
 
 # Testnet overrides
 T_DAG_MB  = 4
@@ -86,6 +117,79 @@ DNS_SEEDS = [
     "node2.polm.com.br",
     "node3.polm.com.br",
 ]
+
+# ─────────────────────────────────────────────────────────────────
+# EVOLUTIONARY BOOST SYSTEM — PoLM RAM Mining Revolution
+#
+# Every 2 years (halving), the DAG doubles and RAM requirements grow.
+# This creates a NEW HARDWARE MARKET: dedicated mining motherboards
+# with massive RAM slots — like GPU mining cards, but for RAM.
+#
+# The goal: force manufacturers to build RAM-mining motherboards
+# with 256+ GB slots, creating a whole new mining hardware category.
+#
+# Halving 1 (~yr 0-2):  DDR2=12x DDR3=10x DDR4=1x  DDR5=0.5x  DAG= 256MB  min= 4GB RAM
+# Halving 2 (~yr 2-4):  DDR2=10x DDR3=8x  DDR4=4x  DDR5=2x    DAG= 512MB  min= 8GB RAM
+# Halving 3 (~yr 4-6):  DDR2=6x  DDR3=5x  DDR4=6x  DDR5=4x    DAG=   1GB  min=16GB RAM
+# Halving 4 (~yr 6-8):  DDR2=3x  DDR3=3x  DDR4=8x  DDR5=6x    DAG=   2GB  min=32GB RAM
+# Halving 5 (~yr 8-10): DDR2=2x  DDR3=2x  DDR4=6x  DDR5=8x    DAG=   4GB  min=64GB RAM
+# Halving 6 (~yr10-12): DDR2=1x  DDR3=1x  DDR4=4x  DDR5=10x   DAG=   8GB  min=128GB RAM
+# Halving 7 (~yr12-14): DDR2=0.5x DDR3=0.5x DDR4=3x DDR5=8x   DAG=  16GB  min=256GB RAM
+#                       DDR6=12x  ← new gen takes DDR2's place!
+# Halving 8+ (~yr14+):  DDR5=4x  DDR6=10x  DDR7=8x           DAG=  32GB  min=512GB RAM
+#                       ← Forces RAM mining motherboard manufacture
+# ─────────────────────────────────────────────────────────────────
+BOOST_TABLE = {
+    # halv: {DDR2,  DDR3,  DDR4,  DDR5,  DDR6,  DDR7}
+    0:  {"DDR2": 12.0, "DDR3": 10.0, "DDR4":  1.0, "DDR5":  0.5, "DDR6":  0.3, "DDR7": 0.2},
+    1:  {"DDR2": 10.0, "DDR3":  8.0, "DDR4":  4.0, "DDR5":  2.0, "DDR6":  0.5, "DDR7": 0.3},
+    2:  {"DDR2":  6.0, "DDR3":  5.0, "DDR4":  6.0, "DDR5":  4.0, "DDR6":  1.0, "DDR7": 0.5},
+    3:  {"DDR2":  3.0, "DDR3":  3.0, "DDR4":  8.0, "DDR5":  6.0, "DDR6":  2.0, "DDR7": 1.0},
+    4:  {"DDR2":  2.0, "DDR3":  2.0, "DDR4":  6.0, "DDR5":  8.0, "DDR6":  4.0, "DDR7": 2.0},
+    5:  {"DDR2":  1.0, "DDR3":  1.0, "DDR4":  4.0, "DDR5": 10.0, "DDR6":  8.0, "DDR7": 4.0},
+    6:  {"DDR2":  0.5, "DDR3":  0.5, "DDR4":  3.0, "DDR5":  8.0, "DDR6": 12.0, "DDR7": 8.0},
+    7:  {"DDR2":  0.2, "DDR3":  0.2, "DDR4":  2.0, "DDR5":  6.0, "DDR6": 10.0, "DDR7":12.0},
+}
+
+# Minimum RAM in MB per halving — forces hardware upgrade
+# This creates demand for RAM-mining motherboards
+MIN_RAM_MB = {
+    0:       4_096,   # 4GB   — any PC
+    1:       8_192,   # 8GB   — decent PC
+    2:      16_384,   # 16GB  — enthusiast PC
+    3:      32_768,   # 32GB  — high-end workstation
+    4:      65_536,   # 64GB  — server/workstation
+    5:     131_072,   # 128GB — dedicated mining rig
+    6:     262_144,   # 256GB — RAM mining motherboard needed!
+    7:     524_288,   # 512GB — next-gen RAM mining board
+}
+
+# DAG size in MB per halving — doubles each time
+DAG_BASE_PER_HALVING = {
+    0:     256,   # 256MB  — fits in any PC
+    1:     512,   # 512MB
+    2:    1024,   # 1GB
+    3:    2048,   # 2GB
+    4:    4096,   # 4GB
+    5:    8192,   # 8GB
+    6:   16384,   # 16GB
+    7:   32768,   # 32GB  — requires RAM mining board
+}
+
+def get_halving(height: int) -> int:
+    return min(height // HALVING_INTERVAL, 7)
+
+def get_static_boost(ram_type: str, height: int = 0) -> float:
+    halving = get_halving(height)
+    return BOOST_TABLE.get(halving, BOOST_TABLE[7]).get(ram_type.upper(), 1.0)
+
+def dag_base_for_height(height: int) -> int:
+    return DAG_BASE_PER_HALVING.get(get_halving(height), 4096)
+
+# Current halving alias
+STATIC_BOOST = BOOST_TABLE[0]
+FOUNDER_NAME = "Aluisio Fernandes (Aluminium)"
+GENESIS_MSG  = "Legacy hardware deserves a second life — PoLM Genesis, March 2026, polm.com.br"
 
 # ─────────────────────────────────────────────────────────────────
 # PLATFORM HELPERS
@@ -381,29 +485,49 @@ class Block:
 # ─────────────────────────────────────────────────────────────────
 # PROOF-OF-LEGACY-MEMORY ALGORITHM
 # ─────────────────────────────────────────────────────────────────
-def dynamic_boost(lat_ns: float, ram_type: str = "DDR4") -> float:
-    """boost = (latency / 1000)^0.8 — rewards higher-latency (legacy) RAM."""
-    static = STATIC_BOOST.get(ram_type, 1.0)
+def dynamic_boost(lat_ns: float, ram_type: str = "DDR4", height: int = 0) -> float:
+    """Combined boost = static(halving) x dynamic(latency).
+    static  = get_static_boost(ram_type, height)
+    dynamic = (latency/1000)^0.8
+    """
+    static  = get_static_boost(ram_type, height)
     dynamic = 1.0 if lat_ns <= 0 else (lat_ns / BASELINE_NS) ** BOOST_ALPHA
     return static * dynamic
 
 def sat_penalty(threads: int) -> float:
-    """Thread saturation penalty."""
-    if threads <= 2:  return 1.00
-    if threads <= 4:  return 0.90
-    if threads <= 8:  return 0.80
-    if threads <= 16: return 0.65
-    return 0.50
+    """Thread saturation penalty — heavily discourages server CPUs.
+    
+    This ensures a 2-thread Core2Duo competes fairly with 16-thread i5.
+    Validated: DDR2 Core2Duo (2t, 1.0x) vs DDR4 i5-12th (16t, 0.25x)
+    """
+    if threads <= 2:  return 1.00   # Core2Duo, old laptops — full reward
+    if threads <= 4:  return 0.75   # old quad-core — small penalty
+    if threads <= 8:  return 0.50   # mid-range — half
+    if threads <= 16: return 0.25   # modern i5/i7 — quarter
+    return 0.10                      # server CPU — 90% penalty
 
 def compute_score(lat_ns: float, boost: float, threads: int) -> float:
-    """score = (1 / latency) × boost × thread_penalty"""
+    """score = (1 / latency) × boost × thread_penalty
+    
+    Higher latency (older RAM) → higher boost → competitive score.
+    More threads → heavier penalty → discourages server rigs.
+    """
     return 0.0 if lat_ns <= 0 else (1.0 / lat_ns) * boost * sat_penalty(threads)
 
 def epoch_of(height: int) -> int:
     return height // EPOCH_BLOCKS
 
-def dag_size_mb(epoch: int, testnet: bool) -> int:
-    return T_DAG_MB if testnet else DAG_BASE_MB + epoch * DAG_GROWTH_MB
+def dag_size_mb(epoch: int, testnet: bool, height: int = 0) -> int:
+    """DAG grows both with epoch AND with each halving.
+    Halving 1: starts at 256MB  (needs ~4GB RAM)
+    Halving 2: starts at 512MB  (needs ~8GB RAM)
+    Halving 3: starts at 1024MB (needs ~16GB RAM)
+    Halving 4: starts at 2048MB (needs ~32GB RAM)
+    """
+    if testnet:
+        return T_DAG_MB
+    base = dag_base_for_height(height)
+    return base + epoch * DAG_GROWTH_MB
 
 def walk_steps(testnet: bool) -> int:
     return T_WALK if testnet else WALK_STEPS_MAIN
@@ -453,7 +577,7 @@ class Blockchain:
         self.tx_block:  Dict[int, List[str]] = {}
         self.ledger     = Ledger()
         self.mempool    = Mempool()
-        self._diff      = T_DIFF if testnet else 4
+        self._diff      = T_DIFF if testnet else 5
         self._peers:    Set[str] = set()
         self._lock      = threading.Lock()
         self._load()
@@ -491,7 +615,7 @@ class Blockchain:
     def _genesis(self):
         b = Block(
             height=0, prev_hash="0" * 64, timestamp=GENESIS_TIME,
-            nonce=0, miner_id="GENESIS — Legacy hardware deserves a second life — PoLM Genesis, March 2026, polm.com.br", ram_type="DDR4", threads=1,
+            nonce=0, miner_id="GENESIS", ram_type="DDR4", threads=1,
             epoch=0, difficulty=self._diff, latency_ns=0.0,
             mem_proof="0" * 64, score=0.0, reward=INITIAL_REWARD, tx_ids=[]
         )
@@ -531,7 +655,8 @@ class Blockchain:
 
     # ── add block ─────────────────────────────────────────────────
     def add_block(self, b: Block,
-                  txs: List[Transaction] = []) -> Tuple[bool, str]:
+                  txs: List[Transaction] = [],
+                  miner_ip: str = "") -> Tuple[bool, str]:
         with self._lock:
             if b.height != self.height + 1:
                 return False, f"height {b.height} expected {self.height+1}"
@@ -547,6 +672,9 @@ class Blockchain:
                 return False, "wrong reward"
             if b.timestamp > int(time.time()) + 120:
                 return False, "timestamp too far in future"
+
+            # Update miner activity tracking
+            self._active_miners[b.miner_id] = float(b.timestamp)
 
             confirmed_ids: List[str] = []
             for tx in txs:
@@ -611,8 +739,14 @@ class Blockchain:
             "next_reward":  block_reward(self.height + 1),
             "block_time":   BLOCK_TIME,
             "peers":        len(self._peers),
-            "mempool_size": self.mempool.size(),
-            "symbol":       SYMBOL,
+            "mempool_size":  self.mempool.size(),
+            "symbol":        SYMBOL,
+            "halving":       get_halving(self.height),
+            "boost_table":   BOOST_TABLE.get(get_halving(self.height), BOOST_TABLE[0]),
+            "min_ram_mb":    MIN_RAM_MB.get(get_halving(self.height), 4096),
+            "founder":       FOUNDER_NAME if "FOUNDER_NAME" in dir() else "Aluisio Fernandes (Aluminium)",
+            "founder_addr":  FOUNDER_ADDRESS,
+            "founder_lock":  FOUNDER_LOCK,
         }
 
 # ─────────────────────────────────────────────────────────────────
@@ -701,10 +835,31 @@ class P2P:
         print(f"[P2P] Sync loop started  ({interval}s interval)")
 
     def bootstrap(self):
+        """Try all DNS seeds + direct IPs for resilient bootstrap."""
+        print(f"[P2P] Bootstrapping from DNS seeds...")
         for seed in DNS_SEEDS:
             try:
                 ip = socket.gethostbyname(seed)
-                self.add(f"{ip}:{self.port}")
+                addr = f"{ip}:{self.port}"
+                self.add(addr)
+                synced = self.sync(addr)
+                print(f"[P2P] Seed {seed} ({ip}) → synced {synced} blocks")
+            except Exception as e:
+                print(f"[P2P] Seed {seed} unreachable: {e}")
+        if self.peers():
+            print(f"[P2P] Connected to {len(self.peers())} seed(s)")
+        else:
+            print(f"[P2P] No seeds reachable — running as isolated node")
+
+    def peer_exchange(self):
+        """Ask peers for their peer list — organic network growth."""
+        for peer in self.peers():
+            try:
+                r = urllib.request.urlopen(f"http://{peer}/peers", timeout=5)
+                d = json.loads(r.read())
+                for p in d.get("peers", []):
+                    if p not in self.peers():
+                        self.add(p)
             except Exception:
                 pass
 
@@ -731,6 +886,14 @@ class PoLMNode:
             self.p2p.add(p)
         self._register_routes()
         self.p2p.start_sync_loop()
+        # Bootstrap from DNS seeds in background
+        threading.Thread(target=self.p2p.bootstrap, daemon=True, name="p2p-bootstrap").start()
+        # Peer exchange every 5 minutes
+        def _peer_exchange_loop():
+            while True:
+                time.sleep(300)
+                self.p2p.peer_exchange()
+        threading.Thread(target=_peer_exchange_loop, daemon=True, name="p2p-exchange").start()
 
     # ── routes ────────────────────────────────────────────────────
     def _register_routes(self):
@@ -760,21 +923,47 @@ class PoLMNode:
         @app.route("/submit", methods=["POST"])
         def submit():
             try:
-                d   = request.json or {}
-                b   = Block.from_dict(d["block"])
-                txs = [Transaction.from_dict(t) for t in d.get("txs", [])]
+                d       = request.json or {}
+                b       = Block.from_dict(d["block"])
+                txs     = [Transaction.from_dict(t) for t in d.get("txs", [])]
+                miner_ip = request.remote_addr or "unknown"
+
+                # ── 1 miner per IP enforcement ──────────────────
+                existing = self.chain._miner_ips.get(miner_ip)
+                if existing and existing != b.miner_id and b.miner_id != FOUNDER_ADDRESS:
+                    # IP already registered to a different miner
+                    return jsonify({
+                        "accepted": False,
+                        "reason": f"IP {miner_ip} already registered to another miner. 1 miner per machine.",
+                    })
+
                 ok, reason = self.chain.add_block(b, txs)
                 if ok:
+                    # Register this IP → miner mapping
+                    self.chain._miner_ips[miner_ip] = b.miner_id
                     print(
                         f"[Node] Block #{b.height}  {b.miner_id[:20]}  "
                         f"{b.ram_type}  {b.latency_ns:.0f}ns  "
-                        f"txs={len(txs)}"
+                        f"ip={miner_ip}  txs={len(txs)}"
                     )
                     self.p2p.broadcast_block(b, txs)
                     self._kick_miner()
                 return jsonify({"accepted": ok, "reason": reason})
             except Exception as e:
                 return jsonify({"accepted": False, "reason": str(e)}), 400
+
+        @app.route("/active_miners")
+        def active_miners():
+            """Shows active miners and their IPs (anonymized)."""
+            now = time.time()
+            result = {}
+            for mid, last in self.chain._active_miners.items():
+                age = now - last
+                result[mid] = {
+                    "last_block_age_s": round(age),
+                    "active": age < 3600,
+                }
+            return jsonify(result)
 
         @app.route("/receive_block", methods=["POST"])
         def receive_block():
@@ -882,12 +1071,47 @@ class PoLMNode:
         def get_peers():
             return jsonify({"peers": self.p2p.peers()})
 
+        @app.route("/active_miners")
+        def active_miners_route():
+            """Shows which IPs are actively mining — anti-multimine monitor."""
+            with _anti_mine_lock:
+                return jsonify({
+                    "count":   len(_active_miners),
+                    "miners":  {ip: addr[:20]+"..." for ip, addr in _active_miners.items()},
+                    "rule":    "1 IP = 1 miner address",
+                    "founder": FOUNDER_ADDRESS[:20]+"... (unrestricted)",
+                })
+
         @app.route("/peers/add", methods=["POST"])
         def add_peer():
             addr = (request.json or {}).get("address", "")
             if addr:
                 self.p2p.add(addr)
+                self.p2p.sync(addr)
             return jsonify({"peers": self.p2p.peers()})
+
+        @app.route("/network")
+        def network_info():
+            """Full network status for monitoring."""
+            return jsonify({
+                "version":        VERSION,
+                "network":        NETWORK,
+                "website":        WEBSITE,
+                "height":         self.chain.height,
+                "peers":          self.p2p.peers(),
+                "peer_count":     len(self.p2p.peers()),
+                "active_miners":  len(self.chain._active_miners),
+                "registered_ips": len(self.chain._miner_ips),
+                "mempool":        self.chain.mempool.size(),
+                "genesis_hash":   self.chain.chain[0].block_hash,
+                "tip_hash":       self.chain.tip.block_hash,
+                "founder":        FOUNDER_NAME,
+                "founder_addr":   FOUNDER_ADDRESS,
+                "founder_lock":   FOUNDER_LOCK,
+                "halving":        get_halving(self.chain.height),
+                "boost_table":    BOOST_TABLE.get(get_halving(self.chain.height), BOOST_TABLE[0]),
+                "min_ram_gb":     MIN_RAM_MB.get(get_halving(self.chain.height), 4096) // 1024,
+            })
 
         @app.route("/info")
         def info():
@@ -936,7 +1160,16 @@ class PoLMNode:
         print(f"  RAM  : {detect_ram()}  Threads: {get_threads()}")
         s = self.chain.summary()
         print(f"  h={s['height']}  supply={s['total_supply']:.0f}/{MAX_SUPPLY} {SYMBOL}")
+        print(f"  Rule : 1 IP = 1 miner  (anti-multimine)")
         print()
+        # Bootstrap P2P network
+        self.p2p.bootstrap()
+        # Announce ourselves to the network in background
+        threading.Thread(
+            target=self.p2p.announce,
+            args=(self.port,),
+            daemon=True
+        ).start()
         self.app.run(
             host="0.0.0.0", port=self.port,
             debug=False, use_reloader=False, threaded=True
@@ -1050,7 +1283,7 @@ class PoLMMiner:
                 if lat < 5:
                     continue
 
-                boost = dynamic_boost(lat, self.ram)
+                boost = dynamic_boost(lat)
                 sc    = compute_score(lat, boost, self.threads)
 
                 b = Block(
