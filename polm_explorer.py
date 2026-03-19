@@ -9,7 +9,7 @@ Founder : @aluisiofer  |  Project : @polm2026
 from flask import Flask, render_template_string, jsonify, request, Response
 import json, time, urllib.request
 
-VERSION   = "2.1.0"
+VERSION   = "2.2.0"
 WEBSITE   = "https://polm.com.br"
 GITHUB    = "https://github.com/proof-of-legacy/Proof-of-Legacy-Memory"
 TWITTER_P = "https://x.com/polm2026"

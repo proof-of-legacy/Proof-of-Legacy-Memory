@@ -24,7 +24,7 @@ from dataclasses import dataclass, asdict
 from typing import Optional, Dict, List, Tuple
 from flask import Flask, jsonify, request, Response
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 SYMBOL  = "POLM"
 WEBSITE = "https://polm.com.br"
 MIN_FEE = 0.0001

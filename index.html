@@ -189,7 +189,7 @@ footer{padding:40px 32px;border-top:1px solid var(--b1);
     <div class="sb-item"><div class="sb-label">Height</div><div class="sb-value" id="s-height">—</div></div>
     <div class="sb-item"><div class="sb-label">Supply</div><div class="sb-value" id="s-supply">—</div></div>
     <div class="sb-item"><div class="sb-label">Difficulty</div><div class="sb-value" id="s-diff">—</div></div>
-    <div class="sb-item"><div class="sb-label">Next Reward</div><div class="sb-value cyan" id="s-reward">5.0 POLM</div></div>
+    <div class="sb-item"><div class="sb-label">Next Reward</div><div class="sb-value cyan" id="s-reward">50 POLM</div></div>
   </div>
 </section>
 
@@ -288,7 +288,7 @@ footer{padding:40px 32px;border-top:1px solid var(--b1);
         <th>DDR2</th><th>DDR3</th><th>DDR4</th><th>DDR5</th><th>DDR6</th><th>Note</th>
       </tr></thead>
       <tbody>
-        <tr style="background:rgba(251,191,36,.03)"><td style="color:var(--cyan)">0–2</td><td>1</td><td>256MB</td><td>4GB</td><td style="color:#fb923c">12×</td><td style="color:#fbbf24">10×</td><td>1×</td><td style="color:var(--t3)">0.5×</td><td style="color:var(--t3)">0.3×</td><td>DDR2 dominates</td></tr>
+        <tr style="background:rgba(251,191,36,.03)"><td style="color:var(--cyan)">0–2</td><td>1</td><td>256MB</td><td>4GB</td><td style="color:#fb923c">12×</td><td style="color:#fbbf24">10×</td><td>1×</td><td style="color:var(--t3)">0.5×</td><td style="color:var(--t3)">0.3×</td><td><strong style="color:var(--green)">50 POLM</strong> · DDR2 dominates</td></tr>
         <tr><td>2–4</td><td>2</td><td>512MB</td><td>8GB</td><td style="color:#fb923c">10×</td><td style="color:#fbbf24">8×</td><td style="color:var(--cyan)">4×</td><td>2×</td><td style="color:var(--t3)">0.5×</td><td>DDR2 still leads</td></tr>
         <tr><td>4–6</td><td>3</td><td>1GB</td><td>16GB</td><td>6×</td><td>5×</td><td style="color:var(--cyan)">6×</td><td style="color:var(--amber)">4×</td><td>1×</td><td>Competition opens</td></tr>
         <tr><td>6–8</td><td>4</td><td>2GB</td><td>32GB</td><td>3×</td><td>3×</td><td style="color:var(--cyan)">8×</td><td style="color:var(--amber)">6×</td><td>2×</td><td>DDR4 takes lead</td></tr>
@@ -344,7 +344,7 @@ footer{padding:40px 32px;border-top:1px solid var(--b1);
     <span class="comment"># Start mining (auto-detects your RAM type)</span><br>
     <span class="cmd">python3</span> polm.py <span class="arg">miner</span> http://node1.polm.com.br:6060 <span class="arg">YOUR_ADDRESS DDR2</span><br><br>
     <span class="out">[Miner] #1  diff=4  reward=5.0 POLM  DAG=256MB  DDR2</span><br>
-    <span class="out">[Miner] Block #1 found!  Boost: 10.8×  Status: ACCEPTED</span>
+    <span class="out">[Miner] Block #1 found!  Boost: 10.8×  Reward: 50 POLM  Status: ACCEPTED</span>
   </div>
 
   <p style="color:var(--t3);font-family:var(--mono);font-size:.75rem;margin-bottom:8px;margin-top:16px"># Windows</p>
@@ -402,7 +402,7 @@ async function loadStats(){
     document.getElementById('s-height').textContent=Number(d.height||0).toLocaleString('en');
     document.getElementById('s-supply').textContent=Number(d.total_supply||0).toLocaleString('en',{maximumFractionDigits:0})+' POLM';
     document.getElementById('s-diff').textContent=d.difficulty||4;
-    document.getElementById('s-reward').textContent=(d.next_reward||5.0).toFixed(2)+' POLM';
+    document.getElementById('s-reward').textContent=(d.next_reward||50.0).toFixed(3)+' POLM';
     document.getElementById('s-height2').textContent=Number(d.height||0).toLocaleString('en');
     document.getElementById('s-supply2').textContent=Number(d.total_supply||0).toLocaleString('en',{maximumFractionDigits:0});
     document.getElementById('s-net').textContent=d.network||'mainnet';

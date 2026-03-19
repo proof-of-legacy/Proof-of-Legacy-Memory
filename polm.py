@@ -81,12 +81,12 @@ def unregister_miner(ip: str, address: str):
 # ─────────────────────────────────────────────────────────────────
 # MAINNET CONSTANTS
 # ─────────────────────────────────────────────────────────────────
-VERSION             = "1.3.0"
+VERSION             = "1.3.1"
 SYMBOL              = "POLM"
 NETWORK             = "mainnet"
 WEBSITE             = "https://polm.com.br"
-MAX_SUPPLY          = 32_000_000
-INITIAL_REWARD      = 5.0
+MAX_SUPPLY          = 210_000_000       # ~210M total over 30+ years
+INITIAL_REWARD      = 50.0              # 50 POLM/block — like Bitcoin
 HALVING_INTERVAL    = 2_100_000       # ~2 years at 30s/block
 BLOCK_TIME          = 30              # seconds
 DIFF_WINDOW         = 144             # blocks per retarget
@@ -95,7 +95,7 @@ EPOCH_BLOCKS        = 100_000
 DAG_BASE_MB         = 256
 DAG_GROWTH_MB       = 64
 WALK_STEPS_MAIN     = 100_000
-GENESIS_TIME        = 1773877659
+GENESIS_TIME        = 1773881445
 FOUNDER_ADDRESS     = "POLMD872771E5F0017C5B5C08D353B5E7B4B"
 FOUNDER_TWITTER     = "https://x.com/aluisiofer"
 PROJECT_TWITTER     = "https://x.com/polm2026"
@@ -1163,26 +1163,220 @@ class PoLMNode:
         print(f"  Rule : 1 IP = 1 miner  (anti-multimine)")
         print()
         # Bootstrap P2P network
-        threading.Thread(target=self.p2p.bootstrap, daemon=True).start()
-        self.app.run(host="0.0.0.0", port=self.port, debug=False, use_reloader=False, threaded=True)
+        self.p2p.bootstrap()
+        # Announce ourselves to the network in background
+        threading.Thread(
+            target=self.p2p.announce,
+            args=(self.port,),
+            daemon=True
+        ).start()
+        self.app.run(
+            host="0.0.0.0", port=self.port,
+            debug=False, use_reloader=False, threaded=True
+        )
 
+# ─────────────────────────────────────────────────────────────────
+# MINER
+# ─────────────────────────────────────────────────────────────────
+class PoLMMiner:
+    def __init__(
+        self,
+        node_url: str,
+        address:  str,
+        ram:      str = "DDR4",
+        testnet:  bool = False,
+        stop:     Optional[threading.Event] = None,
+        verbose:  bool = True,
+    ):
+        self.url     = node_url.rstrip("/")
+        self.address = address
+        self.ram     = ram.upper()
+        self.testnet = testnet
+        self.stop    = stop or threading.Event()
+        self.verbose = verbose
+        self.threads = get_threads()
+        self.penalty = sat_penalty(self.threads)
+        print(
+            f"[Miner] {address[:24]}  |  {self.ram}  |  "
+            f"threads={self.threads}  penalty={self.penalty}x  |  "
+            f"{platform.system()}"
+        )
+
+    def _get(self, path: str) -> Optional[dict]:
+        try:
+            r = urllib.request.urlopen(f"{self.url}{path}", timeout=5)
+            return json.loads(r.read())
+        except Exception:
+            return None
+
+    def _post(self, path: str, data: dict) -> Optional[dict]:
+        try:
+            payload = json.dumps(data).encode("utf-8")
+            req = urllib.request.Request(
+                f"{self.url}{path}", data=payload,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            r = urllib.request.urlopen(req, timeout=8)
+            return json.loads(r.read())
+        except Exception:
+            return None
+
+    def mine_loop(self):
+        """Continuous mining — runs until stop event set."""
+        self.stop.clear()
+        while not self.stop.is_set():
+            self.mine_once()
+
+    def mine_once(self):
+        """Mine one block, then return."""
+        while not self.stop.is_set():
+            work = self._get("/getwork")
+            if not work:
+                if self.verbose:
+                    print("[Miner] Node offline — retrying in 5s...")
+                time.sleep(5)
+                continue
+
+            height  = work["height"]
+            prev    = work["prev_hash"]
+            diff    = work["difficulty"]
+            reward  = work["reward"]
+            epoch   = work["epoch"]
+            tn      = work.get("testnet", self.testnet)
+            target  = "0" * diff
+            pending = [Transaction.from_dict(t)
+                       for t in work.get("pending_txs", [])]
+
+            dag_seed = hashlib.sha3_256(
+                f"polm:{epoch}:{prev[:32]}".encode()
+            ).digest()
+            dag   = MemoryDAG(dag_seed, epoch, tn)
+            steps = walk_steps(tn)
+
+            if self.verbose:
+                print(
+                    f"[Miner] #{height}  diff={diff}  "
+                    f"reward={reward} {SYMBOL}  "
+                    f"DAG={dag_size_mb(epoch, tn)}MB  "
+                    f"txs={len(pending)}  {self.ram}"
+                )
+
+            nonce  = random.randint(0, 2 ** 32)
+            t0     = time.time()
+            checks = 0
+
+            while not self.stop.is_set():
+                nonce  += 1
+                checks += 1
+
+                if checks % 200 == 0:
+                    nw = self._get("/getwork")
+                    if nw and nw["height"] != height:
+                        print(f"[Miner] -> #{nw['height']}  switching...")
+                        break
+
+                seed_h = hashlib.sha3_256(
+                    f"{prev}:{self.address}:{nonce}".encode()
+                ).digest()
+                walk_h, lat = memory_walk(dag, seed_h, steps)
+                if lat < 5:
+                    continue
+
+                boost = dynamic_boost(lat)
+                sc    = compute_score(lat, boost, self.threads)
+
+                b = Block(
+                    height=height, prev_hash=prev,
+                    timestamp=int(time.time()), nonce=nonce,
+                    miner_id=self.address, ram_type=self.ram,
+                    threads=self.threads, epoch=epoch,
+                    difficulty=diff, latency_ns=round(lat, 4),
+                    mem_proof=walk_h.hex(), score=round(sc, 8),
+                    reward=reward,
+                    tx_ids=[t.tx_id for t in pending],
+                )
+                b.block_hash = b.compute_hash()
+
+                if b.block_hash.startswith(target):
+                    elapsed = time.time() - t0
+                    if self.verbose:
+                        print(f"\n[Miner] Block #{height} found!")
+                        print(f"        Hash    : {b.block_hash[:24]}...")
+                        print(f"        Nonce   : {nonce:,}")
+                        print(f"        Time    : {elapsed:.2f}s")
+                        print(f"        Latency : {lat:.1f}ns")
+                        print(f"        Boost   : {boost:.3f}x  (dynamic)")
+                        print(f"        Score   : {sc:.8f}")
+                        print(f"        Reward  : {reward} {SYMBOL}")
+                        print(f"        Txs     : {len(pending)}")
+                    res = self._post("/submit", {
+                        "block": b.to_dict(),
+                        "txs":   [t.to_dict() for t in pending],
+                    })
+                    ok = res.get("accepted", False) if res else False
+                    if self.verbose:
+                        print(f"        Status  : {'ACCEPTED' if ok else 'rejected (race)'}\n")
+                    return
+
+# ─────────────────────────────────────────────────────────────────
+# ENTRY POINT
+# ─────────────────────────────────────────────────────────────────
+def _help():
+    print(f"""
+PoLM v{VERSION} — Proof of Legacy Memory
+{WEBSITE}
+
+  python polm.py node   [port] [peer ...] [--testnet]
+  python polm.py miner  <url> <address> <DDR2|DDR3|DDR4|DDR5> [--testnet]
+  python polm.py info   [--testnet]
+
+Mainnet examples:
+  python polm.py node
+  python polm.py node 6060 node2.polm.com.br:6060
+  python polm.py miner http://node1.polm.com.br:6060 YOUR_ADDRESS DDR2
+
+Testnet (local):
+  python polm.py node --testnet
+  python polm.py miner http://localhost:6060 YOUR_ADDRESS DDR2 --testnet
+
+Override RAM type:
+  Windows : set POLM_RAM_TYPE=DDR3
+  Linux   : export POLM_RAM_TYPE=DDR3
+""")
 
 if __name__ == "__main__":
-    import sys
     if IS_WIN:
-        import multiprocessing; multiprocessing.freeze_support()
+        import multiprocessing
+        multiprocessing.freeze_support()
 
     args    = sys.argv[1:]
     testnet = "--testnet" in args or "--test" in args
     args    = [a for a in args if not a.startswith("--")]
-    if testnet: NETWORK = "testnet"
+    if testnet:
+        NETWORK = "testnet"
 
     mode = args[0] if args else "help"
 
-    if mode == "node":
+    if mode == "info":
+        print(f"\n  PoLM  v{VERSION}  —  {WEBSITE}")
+        print(f"  OS       : {platform.system()} {platform.release()}")
+        print(f"  Python   : {platform.python_version()}")
+        print(f"  RAM      : {detect_ram()}")
+        print(f"  Threads  : {get_threads()}  penalty={sat_penalty(get_threads())}x")
+        print(f"  Network  : {'testnet' if testnet else 'mainnet'}")
+        print(f"  Crypto   : {'ECDSA secp256k1' if HAVE_CRYPTO else 'pip install cryptography'}")
+        print(f"  Data dir : {default_data_dir()}")
+
+    elif mode == "node":
         port  = int(args[1]) if len(args) > 1 and args[1].isdigit() else DEFAULT_PORT
         peers = [a for a in args[2:] if "." in a or ":" in a]
-        node  = PoLMNode(data_dir=default_data_dir(), port=port, testnet=testnet, peers=peers)
+        node  = PoLMNode(
+            data_dir=default_data_dir(),
+            port=port,
+            testnet=testnet,
+            peers=peers,
+        )
         node.run()
 
     elif mode == "miner":
@@ -1192,14 +1386,5 @@ if __name__ == "__main__":
         miner   = PoLMMiner(url, address, ram, testnet)
         miner.mine_loop()
 
-    elif mode == "info":
-        print(f"\n  PoLM  v{VERSION}  —  {WEBSITE}")
-        print(f"  OS       : {platform.system()} {platform.release()}")
-        print(f"  RAM      : {detect_ram()}")
-        print(f"  Threads  : {get_threads()}  penalty={sat_penalty(get_threads())}x")
-        print(f"  Network  : mainnet")
-        print(f"  Data dir : {default_data_dir()}")
-        print(f"  Halving  : {HALVING_INTERVAL:,} blocks (~2yr)")
-        print(f"  Boost H1 : DDR2={BOOST_TABLE[0]['DDR2']}x DDR3={BOOST_TABLE[0]['DDR3']}x")
     else:
-        print(f"Usage: python polm.py node|miner|info [--testnet]")
+        _help()
