@@ -238,7 +238,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
     <div class="sup-wrap">
       <div class="sup-row"><span id="sm" style="color:var(--cyan)"></span><span style="color:var(--t3)">/ 32,000,000 POLM max</span></div>
       <div class="sup-bar"><div class="sup-fill" id="sb" style="width:0%"></div></div>
-      <div class="sup-meta"><span id="spct2"></span><span>halving ~4yr · 5.0 POLM initial reward</span></div>
+      <div class="sup-meta"><span id="spct2"></span><span>halving ~2yr · 50.0 POLM initial reward</span></div>
     </div>
   </div>
   <div class="two">
@@ -255,7 +255,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
       <div class="sec">
         <div class="st">Legacy boost</div>
         <div class="bgrid">
-          <div class="bc b2"><div class="bt">DDR2</div><div class="bm">12×</div><div class="bs">~3500–8000 ns</div><div class="bpen" style="color:var(--green)">max legacy now</div></div>
+          <div class="bc b2"><div class="bt">DDR2</div><div class="bm">12×</div><div class="bs">~3500–8000 ns · yr 0–2</div><div class="bpen" style="color:var(--green)">max legacy now</div></div>
           <div class="bc b3"><div class="bt">DDR3</div><div class="bm">10×</div><div class="bs">~1500–4000 ns</div><div class="bpen" style="color:var(--amber)">strong legacy</div></div>
           <div class="bc b4"><div class="bt">DDR4</div><div class="bm">1×</div><div class="bs">~900–1900 ns</div><div class="bpen" style="color:var(--cyan)">baseline now</div></div>
           <div class="bc b5"><div class="bt">DDR5</div><div class="bm">0.5×</div><div class="bs">~500–900 ns</div><div class="bpen" style="color:var(--red)">penalized now</div></div>
@@ -431,8 +431,8 @@ async function loadSummary(){
   document.getElementById('sb').style.width=Math.min(pct,100)+'%';
   document.getElementById('spct2').textContent=pct+'% of max supply';
   document.getElementById('ni').innerHTML=[
-    ['Symbol','POLM'],['Max supply','32,000,000'],['Block time','30 seconds'],
-    ['Halving','every ~4 years'],['Retarget','every 144 blocks (±25%)'],
+    ['Symbol','POLM'],['Max supply','210,000,000'],['Block time','30 seconds'],
+    ['Halving','every ~2 years (2,100,000 blocks)'],['Retarget','every 144 blocks (±25%)'],
     ['Hash algo','SHA3-256'],['Version',d.version||'1.2.0'],
   ].map(([k,v])=>`<div class="irow"><span class="ik">${k}</span><span class="iv">${v}</span></div>`).join('');
 }
@@ -543,8 +543,8 @@ async function loadProto(){
   document.getElementById('proto-net').innerHTML=[
     ['Symbol','POLM'],['Network',d.network||'mainnet'],['Version',d.version||'1.2.0'],
     ['Height',fn(d.height||0)],['Difficulty',d.difficulty||4],['Epoch',d.epoch||0],
-    ['DAG size',(d.dag_size_mb||256)+'MB'],['Max supply','32,000,000 POLM'],
-    ['Block time','30 seconds'],['Halving interval','4,200,000 blocks (~4yr)'],
+    ['DAG size',(d.dag_size_mb||256)+'MB'],['Max supply','210,000,000 POLM'],
+    ['Block time','30 seconds'],['Halving interval','2,100,000 blocks (~2yr)'],
     ['Retarget window','144 blocks (±25%)'],['Founder lock','5,256,000 blocks (~5yr)'],
   ].map(([k,v])=>`<div class="irow"><span class="ik">${k}</span><span class="iv">${v}</span></div>`).join('');
 }
