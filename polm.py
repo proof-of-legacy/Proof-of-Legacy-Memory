@@ -1165,3 +1165,41 @@ class PoLMNode:
         # Bootstrap P2P network
         threading.Thread(target=self.p2p.bootstrap, daemon=True).start()
         self.app.run(host="0.0.0.0", port=self.port, debug=False, use_reloader=False, threaded=True)
+
+
+if __name__ == "__main__":
+    import sys
+    if IS_WIN:
+        import multiprocessing; multiprocessing.freeze_support()
+
+    args    = sys.argv[1:]
+    testnet = "--testnet" in args or "--test" in args
+    args    = [a for a in args if not a.startswith("--")]
+    if testnet: NETWORK = "testnet"
+
+    mode = args[0] if args else "help"
+
+    if mode == "node":
+        port  = int(args[1]) if len(args) > 1 and args[1].isdigit() else DEFAULT_PORT
+        peers = [a for a in args[2:] if "." in a or ":" in a]
+        node  = PoLMNode(data_dir=default_data_dir(), port=port, testnet=testnet, peers=peers)
+        node.run()
+
+    elif mode == "miner":
+        url     = args[1] if len(args) > 1 else "http://localhost:6060"
+        address = args[2] if len(args) > 2 else "Anonymous"
+        ram     = args[3] if len(args) > 3 else detect_ram()
+        miner   = PoLMMiner(url, address, ram, testnet)
+        miner.mine_loop()
+
+    elif mode == "info":
+        print(f"\n  PoLM  v{VERSION}  —  {WEBSITE}")
+        print(f"  OS       : {platform.system()} {platform.release()}")
+        print(f"  RAM      : {detect_ram()}")
+        print(f"  Threads  : {get_threads()}  penalty={sat_penalty(get_threads())}x")
+        print(f"  Network  : mainnet")
+        print(f"  Data dir : {default_data_dir()}")
+        print(f"  Halving  : {HALVING_INTERVAL:,} blocks (~2yr)")
+        print(f"  Boost H1 : DDR2={BOOST_TABLE[0]['DDR2']}x DDR3={BOOST_TABLE[0]['DDR3']}x")
+    else:
+        print(f"Usage: python polm.py node|miner|info [--testnet]")
