@@ -42,7 +42,7 @@ import hashlib, time, json, threading, random, socket, subprocess, platform, sec
 import urllib.request, urllib.error
 from dataclasses import dataclass, field, asdict
 from typing import Optional, List, Dict, Set, Tuple
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 
 # ─────────────────────────────────────────────────────────────────
 # ANTI-MULTI-MINING: 1 IP = 1 active miner
@@ -810,6 +810,13 @@ class PoLMNode:
         self.chain   = Blockchain(data_dir, testnet)
         self.p2p     = P2P(self.chain, port)
         self.app     = Flask("polm-node")
+
+        @self.app.after_request
+        def add_cors(response):
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+            return response
         self.port    = port
         self._mstop  = threading.Event()
         self._mid:   Optional[str] = None
