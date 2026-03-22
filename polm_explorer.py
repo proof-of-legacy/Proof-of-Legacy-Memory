@@ -255,7 +255,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
       <div class="sec">
         <div class="st">Legacy boost</div>
         <div class="bgrid">
-          <div class="bc b2"><div class="bt">DDR2</div><div class="bm">12×</div><div class="bs">~3500–8000 ns · yr 0–2</div><div class="bpen" style="color:var(--green)">max legacy now</div></div>
+          <div class="bc b2"><div class="bt">DDR2</div><div class="bm">20×</div><div class="bs">~3500–8000 ns · yr 0–2</div><div class="bpen" style="color:var(--green)">max legacy now</div></div>
           <div class="bc b3"><div class="bt">DDR3</div><div class="bm">10×</div><div class="bs">~1500–4000 ns</div><div class="bpen" style="color:var(--amber)">strong legacy</div></div>
           <div class="bc b4"><div class="bt">DDR4</div><div class="bm">1×</div><div class="bs">~900–1900 ns</div><div class="bpen" style="color:var(--cyan)">baseline now</div></div>
           <div class="bc b5"><div class="bt">DDR5</div><div class="bm">0.5×</div><div class="bs">~500–900 ns</div><div class="bpen" style="color:var(--red)">penalized now</div></div>
@@ -334,7 +334,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
   <div class="sec">
     <div class="st">Boost table — validated testnet (816 blocks)</div>
     <div class="bgrid">
-      <div class="bc b2"><div class="bt">DDR2</div><div class="bm">12×</div><div class="bs">Halving 1 — max</div><div class="bpen" style="color:var(--green)">Core2Duo 2006 ✓</div></div>
+      <div class="bc b2"><div class="bt">DDR2</div><div class="bm">20×</div><div class="bs">Halving 1 — max</div><div class="bpen" style="color:var(--green)">Core2Duo 2006 ✓</div></div>
       <div class="bc b3"><div class="bt">DDR3</div><div class="bm">10×</div><div class="bs">Halving 1 — strong</div><div class="bpen" style="color:var(--amber)">Legacy bonus ✓</div></div>
       <div class="bc b4"><div class="bt">DDR4</div><div class="bm">1×→8×</div><div class="bs">Grows each halving</div><div class="bpen" style="color:var(--cyan)">Dominates yr 6 ✓</div></div>
       <div class="bc b5"><div class="bt">DDR5</div><div class="bm">0.5×→10×</div><div class="bs">Grows each halving</div><div class="bpen" style="color:var(--purple)">Dominates yr 10 ✓</div></div>
