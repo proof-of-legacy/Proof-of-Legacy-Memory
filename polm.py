@@ -1237,7 +1237,13 @@ class PoLMMiner:
                 )
                 b.block_hash = b.compute_hash()
 
-                if b.block_hash.startswith(target):
+                # Adaptive target: higher score = easier hash target
+                # DDR2 score ~0.035 vs DDR4 ~0.001 — DDR2 gets 2 extra hex digits (256x easier)
+                _score_bonus = 0
+                if sc >= 0.010:   _score_bonus = 2
+                elif sc >= 0.003: _score_bonus = 1
+                _eff_target = "0" * max(1, diff - _score_bonus)
+                if b.block_hash.startswith(_eff_target):
                     elapsed = time.time() - t0
                     if self.verbose:
                         print(f"\n[Miner] Block #{height} found!")
