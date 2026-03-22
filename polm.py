@@ -160,7 +160,11 @@ def default_data_dir() -> str:
     return d
 
 def get_threads() -> int:
-    return os.cpu_count() or 2
+    # Fixed at 1 thread — DDR2 legacy hardware dominates via latency boost
+    env = os.environ.get("POLM_THREADS", "")
+    if env.isdigit() and int(env) > 0:
+        return int(env)
+    return 1
 
 def detect_ram() -> str:
     env = os.environ.get("POLM_RAM_TYPE", "").upper().strip()
