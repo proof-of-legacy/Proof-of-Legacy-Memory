@@ -212,7 +212,7 @@ def default_data_dir() -> str:
     return d
 
 def get_threads() -> int:
-    return os.cpu_count() or 2
+    return min(os.cpu_count() or 1, 4)  # max 4 threads
 
 def detect_ram() -> str:
     """Auto-detect RAM type. Override with env POLM_RAM_TYPE."""
@@ -498,24 +498,12 @@ def dynamic_boost(lat_ns: float, ram_type: str = "DDR4", height: int = 0) -> flo
     return 1.0
 
 def sat_penalty(threads: int) -> float:
-    """Thread saturation penalty — heavily discourages server CPUs.
-    
-    This ensures a 2-thread Core2Duo competes fairly with 16-thread i5.
-    Validated: DDR2 Core2Duo (2t, 1.0x) vs DDR4 i5-12th (16t, 0.25x)
-    """
-    if threads <= 2:  return 1.00   # Core2Duo, old laptops — full reward
-    if threads <= 4:  return 0.75   # old quad-core — small penalty
-    if threads <= 8:  return 0.50   # mid-range — half
-    if threads <= 16: return 0.25   # modern i5/i7 — quarter
-    return 0.10                      # server CPU — 90% penalty
+    """No penalty — all thread counts welcome. Max 4 threads enforced at get_threads()."""
+    return 1.0
 
 def compute_score(lat_ns: float, boost: float, threads: int) -> float:
-    """score = (1 / latency) × boost × thread_penalty
-    
-    Higher latency (older RAM) → higher boost → competitive score.
-    More threads → heavier penalty → discourages server rigs.
-    """
-    return 0.0 if lat_ns <= 0 else (1.0 / lat_ns) * boost * sat_penalty(threads)
+    """score = 1 / latency_ns — pure physics, no boost, no penalty."""
+    return 0.0 if lat_ns <= 0 else (1.0 / lat_ns)
 
 def epoch_of(height: int) -> int:
     return height // EPOCH_BLOCKS
