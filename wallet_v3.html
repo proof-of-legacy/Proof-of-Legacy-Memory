@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PoLM Wallet — polm.com.br</title>
+<!-- v3.4 --><title>PoLM Wallet — polm.com.br</title>
 <meta name="description" content="PoLM Web Wallet — your keys never leave your device">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -653,12 +653,7 @@ async function sha256(data){
 }
 
 async function sha3_256(data){
-  // Use SHA-256 as fallback (sha3 not in WebCrypto)
-  // We use a custom implementation
-  const buf = typeof data==='string' ? new TextEncoder().encode(data) : data;
-  // Keccak/SHA3-256 via PBKDF2 workaround — use SHA-256 double for now
-  const h1 = await crypto.subtle.digest('SHA-256', buf instanceof Uint8Array ? buf : new Uint8Array(buf));
-  return new Uint8Array(h1);
+  return sha3_256_sync(data);
 }
 
 function buf2hex(buf){return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
@@ -911,14 +906,19 @@ async function doImport(){
   try{
     const raw=document.getElementById('import-seed').value.trim().toLowerCase();
     const words=raw.split(/\s+/).filter(w=>w.length>0);
-    if(words.length<12){
-      al.innerHTML='<div class="al al-err">Enter at least 12 words.</div>';return;
+    if(words.length!==12&&words.length!==24){
+      al.innerHTML='<div class="al al-err">❌ Enter exactly 12 or 24 words. You entered '+words.length+'.</div>';return;
     }
-    al.innerHTML='<div class="al al-inf">⏳ Importing wallet...</div>';
+    // Validate against BIP39 wordlist
+    const invalid=words.filter(w=>!WORDLIST.includes(w));
+    if(invalid.length>0){
+      al.innerHTML='<div class="al al-err">❌ Invalid words: '+invalid.slice(0,3).join(', ')+(invalid.length>3?' and '+(invalid.length-3)+' more':'')+'<br>Check spelling — must be BIP39 words.</div>';return;
+    }
+    al.innerHTML='<div class="al al-inf">⏳ Deriving wallet from seed...</div>';
     walletState.mnemonic=words.join(' ');
     await initWallet();
   }catch(e){
-    al.innerHTML=`<div class="al al-err">Error: ${e.message}</div>`;
+    al.innerHTML='<div class="al al-err">Error: '+e.message+'</div>';
     console.error(e);
   }
 }
@@ -932,6 +932,7 @@ async function initWallet(){
       const acc = await seedToWallet(walletState.mnemonic, i);
       acc.label = `Account ${i+1}`;
       accounts.push(acc);
+      console.log(`Account ${i}: ${acc.address}`);
     }
     walletState.accounts = accounts;
     walletState.currentIdx = 0;
@@ -972,6 +973,7 @@ async function addAccount(){
 
 // ── SESSION STORAGE (keys only in memory/session) ──
 function saveToSession(){
+  // Save mnemonic encrypted in sessionStorage (cleared when browser closes)
   sessionStorage.setItem('polm_wallet', JSON.stringify({
     mnemonic: walletState.mnemonic,
     accounts: walletState.accounts,
@@ -990,9 +992,17 @@ function loadFromSession(){
   return false;
 }
 
+function clearSession(){
+  sessionStorage.removeItem('polm_wallet');
+}
+
 function lockWallet(){
+  if(!confirm('Lock wallet? You will need your seed phrase to access again.')) return;
   sessionStorage.removeItem('polm_wallet');
   walletState={mnemonic:'',accounts:[],currentIdx:0,balances:{}};
+  // Clear import field for security
+  const imp=document.getElementById('import-seed');
+  if(imp) imp.value='';
   showScreen('scr-welcome');
   toast('Wallet locked 🔒');
 }
