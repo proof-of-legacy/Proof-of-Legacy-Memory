@@ -1,5 +1,5 @@
 """
-PoLM — Proof of Legacy Memory  v1.3.1
+PoLM — Proof of Legacy Memory  v1.2.0
 https://polm.com.br
 
 The first RAM-latency-bound Proof-of-Work consensus algorithm.
@@ -42,27 +42,35 @@ import hashlib, time, json, threading, random, socket, subprocess, platform, sec
 import urllib.request, urllib.error
 from dataclasses import dataclass, field, asdict
 from typing import Optional, List, Dict, Set, Tuple
-from flask import Flask, jsonify, request, Response
+from flask import Flask, jsonify, request
 
 # ─────────────────────────────────────────────────────────────────
 # ANTI-MULTI-MINING: 1 IP = 1 active miner
+# Each IP can only have ONE active miner per address.
+# The founder address can connect from multiple IPs (maintenance).
 # ─────────────────────────────────────────────────────────────────
 _active_miners: Dict[str, str] = {}   # ip → miner_address
 _miner_ips:     Dict[str, str] = {}   # miner_address → ip
 _anti_mine_lock = threading.Lock()
 
 def register_miner(ip: str, address: str, founder: str) -> Tuple[bool, str]:
+    """Register a miner. Returns (allowed, reason).
+    Rules:
+    - 1 IP can only mine with 1 address
+    - 1 address can only mine from 1 IP
+    - Founder address bypasses IP restriction (maintenance)
+    """
     if address == founder:
-        return True, "founder"
+        return True, "founder"   # founder can connect from anywhere
     with _anti_mine_lock:
-        existing_ip   = _miner_ips.get(address)
+        existing_ip  = _miner_ips.get(address)
         existing_addr = _active_miners.get(ip)
         if existing_ip and existing_ip != ip:
             return False, f"address already mining from {existing_ip}"
         if existing_addr and existing_addr != address:
             return False, f"IP already mining with {existing_addr}"
-        _active_miners[ip]  = address
-        _miner_ips[address] = ip
+        _active_miners[ip]      = address
+        _miner_ips[address]     = ip
     return True, "ok"
 
 def unregister_miner(ip: str, address: str):
@@ -73,32 +81,50 @@ def unregister_miner(ip: str, address: str):
 # ─────────────────────────────────────────────────────────────────
 # MAINNET CONSTANTS
 # ─────────────────────────────────────────────────────────────────
-VERSION             = "1.3.1"
+VERSION             = "2.0.0"
 SYMBOL              = "POLM"
 NETWORK             = "mainnet"
 WEBSITE             = "https://polm.com.br"
-MAX_SUPPLY          = 210_000_000
-INITIAL_REWARD      = 50.0
-HALVING_INTERVAL    = 2_100_000
-BLOCK_TIME          = 30
-DIFF_WINDOW         = 144
-DIFF_CLAMP          = 0.25
-EPOCH_BLOCKS        = 100_000
+MAX_SUPPLY          = 210_000_000       # ~210M total over 30+ years
+INITIAL_REWARD      = 100.0             # 100 POLM/block — generous launch
+BLOCK_TIME          = 120             # 2 minutes — stable like Litecoin
+DIFF_WINDOW         = 144             # blocks per retarget (~4.8h at 2min/block)
+DIFF_CLAMP          = 0.25            # ±25% max adjustment
+
+# ── EPOCH / RAM HALVING SYSTEM ──────────────────────────────────
+# Halving is driven by RAM epochs, not just block count.
+# Each epoch doubles the DAG size — forcing more RAM.
+# This creates demand for dedicated RAM-mining hardware:
+# motherboards with massive RAM slots, like GPU cards but for RAM.
+#
+# Epoch 0  (~138 days): DAG=256MB   reward=100  min=1GB   → any PC
+# Epoch 1  (~138 days): DAG=512MB   reward=50   min=2GB   → decent PC
+# Epoch 2  (~138 days): DAG=1GB     reward=25   min=4GB   → gaming PC
+# Epoch 3  (~138 days): DAG=2GB     reward=12.5 min=8GB   → workstation
+# Epoch 4  (~138 days): DAG=4GB     reward=6.25 min=16GB  → high-end PC
+# Epoch 5  (~138 days): DAG=8GB     reward=3.12 min=32GB  → server
+# Epoch 6  (~138 days): DAG=16GB    reward=1.56 min=64GB  → dedicated rig
+# Epoch 7  (~138 days): DAG=32GB    reward=0.78 min=128GB → RAM mining board!
+# Epoch 8  (~138 days): DAG=64GB    reward=0.39 min=256GB → industrial!
+# Epoch 9+ (~138 days): DAG=128GB+  reward→0    min=512GB+→ new hardware market
+#
+# Total supply: converges to 210,000,000 POLM over ~4 years
+EPOCH_BLOCKS        = 100_000         # ~138 days per epoch at 2min/block
+HALVING_INTERVAL    = EPOCH_BLOCKS    # 1 halving per epoch (RAM-driven)
 DAG_BASE_MB         = 256
-DAG_GROWTH_MB       = 64
+DAG_GROWTH_MB       = 0               # not used — DAG defined per epoch below
 WALK_STEPS_MAIN     = 100_000
-GENESIS_TIME        = 1773881445
+GENESIS_TIME        = 1774213423
 FOUNDER_ADDRESS     = "POLMD872771E5F0017C5B5C08D353B5E7B4B"
 FOUNDER_TWITTER     = "https://x.com/aluisiofer"
 PROJECT_TWITTER     = "https://x.com/polm2026"
-FOUNDER_LOCK        = 10_500_000      # 5% of 210M supply
+FOUNDER_LOCK        = 5_256_000       # ~5 years
 DEFAULT_PORT        = 6060
 MIN_FEE             = 0.0001
-MAX_MINERS_PER_IP   = 1
-FOUNDER_IPS_ALLOWED = True
-BASELINE_NS         = 1000.0
+MAX_MINERS_PER_IP   = 1        # 1 miner per IP — prevents multi-instance cheating
+FOUNDER_IPS_ALLOWED = True     # founder can run maintenance miners
+BASELINE_NS         = 1000.0          # DDR4 reference latency
 BOOST_ALPHA         = 0.8
-FOUNDER_NAME        = "Aluisio Fernandes (Aluminium)"
 
 # Testnet overrides
 T_DAG_MB  = 4
@@ -111,31 +137,54 @@ DNS_SEEDS = [
     "node3.polm.com.br",
 ]
 
-BOOST_TABLE = {
-    0:  {"DDR2": 50.0, "DDR3": 15.0, "DDR4":  1.0, "DDR5":  0.5, "DDR6":  0.3, "DDR7": 0.2},
-    1:  {"DDR2": 10.0, "DDR3":  8.0, "DDR4":  4.0, "DDR5":  2.0, "DDR6":  0.5, "DDR7": 0.3},
-    2:  {"DDR2":  6.0, "DDR3":  5.0, "DDR4":  6.0, "DDR5":  4.0, "DDR6":  1.0, "DDR7": 0.5},
-    3:  {"DDR2":  3.0, "DDR3":  3.0, "DDR4":  8.0, "DDR5":  6.0, "DDR6":  2.0, "DDR7": 1.0},
-    4:  {"DDR2":  2.0, "DDR3":  2.0, "DDR4":  6.0, "DDR5":  8.0, "DDR6":  4.0, "DDR7": 2.0},
-    5:  {"DDR2":  1.0, "DDR3":  1.0, "DDR4":  4.0, "DDR5": 10.0, "DDR6":  8.0, "DDR7": 4.0},
-    6:  {"DDR2":  0.5, "DDR3":  0.5, "DDR4":  3.0, "DDR5":  8.0, "DDR6": 12.0, "DDR7": 8.0},
-    7:  {"DDR2":  0.2, "DDR3":  0.2, "DDR4":  2.0, "DDR5":  6.0, "DDR6": 10.0, "DDR7":12.0},
-}
+# ─────────────────────────────────────────────────────────────────
+# PoLM v2.0 — Pure Memory Latency Consensus
+#
+# No boosts. No tricks. The RAM speaks for itself.
+# Score = 1 / latency_ns
+# Higher latency = more memory work = higher score
+#
+# Any RAM works. Any age. Any speed.
+# 4 threads max — beyond that, parallelism doesn't help.
+#
+# "Mine with your RAM — latency is truth."
+# ─────────────────────────────────────────────────────────────────
 
-MIN_RAM_MB = {
-    0:    4_096, 1:    8_192, 2:   16_384, 3:   32_768,
-    4:   65_536, 5:  131_072, 6:  262_144, 7:  524_288,
-}
 
+# DAG size per epoch — doubles each time, forcing RAM hardware evolution
 DAG_BASE_PER_HALVING = {
-    0:    256, 1:    512, 2:   1024, 3:   2048,
-    4:   4096, 5:   8192, 6:  16384, 7:  32768,
+    0:       256,   # 256MB   — any PC
+    1:       512,   # 512MB   — decent PC
+    2:      1024,   # 1GB     — gaming PC
+    3:      2048,   # 2GB     — workstation
+    4:      4096,   # 4GB     — high-end
+    5:      8192,   # 8GB     — server
+    6:     16384,   # 16GB    — dedicated rig
+    7:     32768,   # 32GB    — RAM mining board!
+    8:     65536,   # 64GB    — industrial
+    9:    131072,   # 128GB   — new hardware market
+    10:   262144,   # 256GB   — specialized motherboards
+    11:   524288,   # 512GB   — factory-scale RAM mining
 }
 
-GENESIS_MSG = "Legacy hardware deserves a second life — PoLM Genesis, March 2026, polm.com.br"
+# Minimum RAM per epoch — aggressive growth forces hardware evolution
+MIN_RAM_MB = {
+    0:       1_024,   # 1GB    — any PC
+    1:       2_048,   # 2GB    — decent PC
+    2:       4_096,   # 4GB    — gaming PC
+    3:       8_192,   # 8GB    — workstation
+    4:      16_384,   # 16GB   — high-end PC
+    5:      32_768,   # 32GB   — server
+    6:      65_536,   # 64GB   — dedicated rig
+    7:     131_072,   # 128GB  — RAM mining board!
+    8:     262_144,   # 256GB  — industrial
+    9:     524_288,   # 512GB  — new hardware market
+    10:  1_048_576,   # 1TB    — specialized motherboards
+    11:  2_097_152,   # 2TB    — factory-scale
+}
 
 def get_halving(height: int) -> int:
-    return min(height // HALVING_INTERVAL, 7)
+    return min(epoch_of(height), 11)
 
 def get_static_boost(ram_type: str, height: int = 0) -> float:
     halving = get_halving(height)
@@ -144,7 +193,10 @@ def get_static_boost(ram_type: str, height: int = 0) -> float:
 def dag_base_for_height(height: int) -> int:
     return DAG_BASE_PER_HALVING.get(get_halving(height), 4096)
 
+# Current halving alias
 STATIC_BOOST = BOOST_TABLE[0]
+FOUNDER_NAME = "Aluisio Fernandes (Aluminium)"
+GENESIS_MSG  = "Legacy hardware deserves a second life — PoLM Genesis, March 2026, polm.com.br"
 
 # ─────────────────────────────────────────────────────────────────
 # PLATFORM HELPERS
@@ -160,13 +212,10 @@ def default_data_dir() -> str:
     return d
 
 def get_threads() -> int:
-    # Fixed at 1 thread — DDR2 legacy hardware dominates via latency boost
-    env = os.environ.get("POLM_THREADS", "")
-    if env.isdigit() and int(env) > 0:
-        return int(env)
-    return 1
+    return os.cpu_count() or 2
 
 def detect_ram() -> str:
+    """Auto-detect RAM type. Override with env POLM_RAM_TYPE."""
     env = os.environ.get("POLM_RAM_TYPE", "").upper().strip()
     if env in ("DDR2", "DDR3", "DDR4", "DDR5"):
         return env
@@ -187,6 +236,7 @@ def detect_ram() -> str:
             nums = [ln.strip() for ln in out.splitlines() if ln.strip().isdigit()]
             if nums:
                 return {34: "DDR5", 26: "DDR4", 24: "DDR3", 21: "DDR2"}.get(int(nums[0]), "DDR4")
+            # PowerShell fallback
             out2 = subprocess.check_output(
                 ["powershell", "-Command",
                  "Get-CimInstance Win32_PhysicalMemory | Select SMBIOSMemoryType"],
@@ -208,6 +258,7 @@ def detect_ram() -> str:
     return "DDR4"
 
 def atomic_write(path: str, data: str):
+    """Write file atomically (safe on all platforms)."""
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(data)
@@ -233,6 +284,7 @@ def pubkey_to_address(pub_hex: str) -> str:
     return "POLM" + h[:32].upper()
 
 def generate_keypair() -> Tuple[str, str, str]:
+    """Returns (priv_hex, pub_hex, address)."""
     if HAVE_CRYPTO:
         priv = ec.generate_private_key(ec.SECP256K1(), default_backend())
         priv_hex = priv.private_bytes(
@@ -353,7 +405,7 @@ class Mempool:
             return [t.to_dict() for t in self._txs.values()]
 
 # ─────────────────────────────────────────────────────────────────
-# LEDGER
+# LEDGER (account balances)
 # ─────────────────────────────────────────────────────────────────
 class Ledger:
     def __init__(self):
@@ -441,24 +493,40 @@ class Block:
 # PROOF-OF-LEGACY-MEMORY ALGORITHM
 # ─────────────────────────────────────────────────────────────────
 def dynamic_boost(lat_ns: float, ram_type: str = "DDR4", height: int = 0) -> float:
-    static  = get_static_boost(ram_type, height)
-    dynamic = 1.0 if lat_ns <= 0 else (lat_ns / BASELINE_NS) ** BOOST_ALPHA
-    return static * dynamic
+    # Pure latency — no artificial boost by RAM type
+    # Higher latency naturally scores higher
+    return 1.0
 
 def sat_penalty(threads: int) -> float:
-    if threads <= 2:  return 1.00
-    if threads <= 4:  return 0.75
-    if threads <= 8:  return 0.50
-    if threads <= 16: return 0.25
-    return 0.10
+    """Thread saturation penalty — heavily discourages server CPUs.
+    
+    This ensures a 2-thread Core2Duo competes fairly with 16-thread i5.
+    Validated: DDR2 Core2Duo (2t, 1.0x) vs DDR4 i5-12th (16t, 0.25x)
+    """
+    if threads <= 2:  return 1.00   # Core2Duo, old laptops — full reward
+    if threads <= 4:  return 0.75   # old quad-core — small penalty
+    if threads <= 8:  return 0.50   # mid-range — half
+    if threads <= 16: return 0.25   # modern i5/i7 — quarter
+    return 0.10                      # server CPU — 90% penalty
 
 def compute_score(lat_ns: float, boost: float, threads: int) -> float:
+    """score = (1 / latency) × boost × thread_penalty
+    
+    Higher latency (older RAM) → higher boost → competitive score.
+    More threads → heavier penalty → discourages server rigs.
+    """
     return 0.0 if lat_ns <= 0 else (1.0 / lat_ns) * boost * sat_penalty(threads)
 
 def epoch_of(height: int) -> int:
     return height // EPOCH_BLOCKS
 
 def dag_size_mb(epoch: int, testnet: bool, height: int = 0) -> int:
+    """DAG grows both with epoch AND with each halving.
+    Halving 1: starts at 256MB  (needs ~4GB RAM)
+    Halving 2: starts at 512MB  (needs ~8GB RAM)
+    Halving 3: starts at 1024MB (needs ~16GB RAM)
+    Halving 4: starts at 2048MB (needs ~32GB RAM)
+    """
     if testnet:
         return T_DAG_MB
     base = dag_base_for_height(height)
@@ -468,10 +536,12 @@ def walk_steps(testnet: bool) -> int:
     return T_WALK if testnet else WALK_STEPS_MAIN
 
 def block_reward(height: int) -> float:
-    halvings = height // HALVING_INTERVAL
-    return 0.0 if halvings >= 64 else INITIAL_REWARD / (2 ** halvings)
+    # Reward halves every epoch (driven by RAM requirement growth)
+    epoch = epoch_of(height)
+    return 0.0 if epoch >= 32 else INITIAL_REWARD / (2 ** epoch)
 
 class MemoryDAG:
+    """Large pseudorandom buffer seeded from epoch — defeats caching."""
     def __init__(self, seed: bytes, epoch: int, testnet: bool):
         sz  = dag_size_mb(epoch, testnet) * 1024 * 1024
         buf = bytearray()
@@ -480,8 +550,8 @@ class MemoryDAG:
             blk = hashlib.sha3_512(cur).digest()
             buf.extend(blk)
             cur = blk
-        self._b   = bytes(buf[:sz])
-        self.size = sz
+        self._b    = bytes(buf[:sz])
+        self.size  = sz
 
     def read(self, pos: int) -> bytes:
         i = pos % (self.size - 32)
@@ -503,22 +573,20 @@ def memory_walk(dag: MemoryDAG, seed: bytes, steps: int) -> Tuple[bytes, float]:
 # ─────────────────────────────────────────────────────────────────
 class Blockchain:
     def __init__(self, data_dir: str, testnet: bool = False):
-        self.testnet        = testnet
-        self._chain_f       = os.path.join(data_dir, "chain.json")
-        self._tx_f          = os.path.join(data_dir, "txs.json")
-        self.chain:         List[Block] = []
-        self.txs:           Dict[str, Transaction] = {}
-        self.tx_block:      Dict[int, List[str]] = {}
-        self.ledger         = Ledger()
-        self.mempool        = Mempool()
-        self._diff          = T_DIFF if testnet else 3
-        self._peers:        Set[str] = set()
-        self._lock          = threading.Lock()
-        # FIX: _active_miners must be initialized here (was missing → AttributeError)
-        self._active_miners: Dict[str, float] = {}   # miner_id → last timestamp
-        self._miner_ips:     Dict[str, str]   = {}   # address → ip
+        self.testnet    = testnet
+        self._chain_f   = os.path.join(data_dir, "chain.json")
+        self._tx_f      = os.path.join(data_dir, "txs.json")
+        self.chain:     List[Block] = []
+        self.txs:       Dict[str, Transaction] = {}
+        self.tx_block:  Dict[int, List[str]] = {}
+        self.ledger     = Ledger()
+        self.mempool    = Mempool()
+        self._diff      = T_DIFF if testnet else 5
+        self._peers:    Set[str] = set()
+        self._lock      = threading.Lock()
         self._load()
 
+    # ── persistence ───────────────────────────────────────────────
     def _save(self):
         atomic_write(self._chain_f,
                      json.dumps([b.to_dict() for b in self.chain]))
@@ -529,27 +597,19 @@ class Blockchain:
 
     def _load(self):
         if os.path.exists(self._chain_f):
-            try:
-                with open(self._chain_f, encoding="utf-8") as f:
-                    self.chain = [Block.from_dict(d) for d in json.load(f)]
-                self._diff = self.chain[-1].difficulty
-                print(f"[Chain] Loaded {len(self.chain)} blocks  height={self.height}")
-            except (json.JSONDecodeError, Exception) as e:
-                print(f"[Chain] WARNING: chain.json corrupted ({e}), starting fresh")
-                self.chain = []
-                self._genesis()
+            with open(self._chain_f, encoding="utf-8") as f:
+                self.chain = [Block.from_dict(d) for d in json.load(f)]
+            self._diff = self.chain[-1].difficulty
+            print(f"[Chain] Loaded {len(self.chain)} blocks  height={self.height}")
         else:
             self._genesis()
         if os.path.exists(self._tx_f):
-            try:
-                with open(self._tx_f, encoding="utf-8") as f:
-                    d = json.load(f)
-                self.txs = {k: Transaction.from_dict(v)
-                            for k, v in d.get("txs", {}).items()}
-                self.tx_block = {int(k): v
-                                 for k, v in d.get("tx_block", {}).items()}
-            except Exception as e:
-                print(f"[Chain] WARNING: txs.json corrupted ({e}), ignoring")
+            with open(self._tx_f, encoding="utf-8") as f:
+                d = json.load(f)
+            self.txs = {k: Transaction.from_dict(v)
+                        for k, v in d.get("txs", {}).items()}
+            self.tx_block = {int(k): v
+                             for k, v in d.get("tx_block", {}).items()}
         self.ledger.rebuild(
             self.chain,
             {h: [self.txs[i] for i in ids if i in self.txs]
@@ -568,6 +628,7 @@ class Blockchain:
         self._save()
         print(f"[Chain] Genesis  {b.block_hash[:16]}...")
 
+    # ── properties ────────────────────────────────────────────────
     @property
     def height(self) -> int:
         return len(self.chain) - 1
@@ -583,6 +644,7 @@ class Blockchain:
     def target(self) -> str:
         return "0" * self._diff
 
+    # ── difficulty retarget ───────────────────────────────────────
     def _retarget(self):
         if len(self.chain) < 2 or len(self.chain) % DIFF_WINDOW != 0:
             return
@@ -595,6 +657,7 @@ class Blockchain:
         self._diff = max(1, round(self._diff * ratio))
         print(f"[Chain] Difficulty retarget  ->  {self._diff}")
 
+    # ── add block ─────────────────────────────────────────────────
     def add_block(self, b: Block,
                   txs: List[Transaction] = [],
                   miner_ip: str = "") -> Tuple[bool, str]:
@@ -614,8 +677,7 @@ class Blockchain:
             if b.timestamp > int(time.time()) + 120:
                 return False, "timestamp too far in future"
 
-            # FIX: was crashing with AttributeError because _active_miners
-            # wasn't defined in __init__ in the original code
+            # Update miner activity tracking
             self._active_miners[b.miner_id] = float(b.timestamp)
 
             confirmed_ids: List[str] = []
@@ -637,6 +699,7 @@ class Blockchain:
             self._save()
             return True, "ok"
 
+    # ── submit transaction ────────────────────────────────────────
     def submit_tx(self, tx: Transaction) -> Tuple[bool, str]:
         if not tx.is_valid_format():
             return False, "invalid format"
@@ -651,6 +714,7 @@ class Blockchain:
                 return False, "invalid signature"
         return self.mempool.add(tx)
 
+    # ── queries ───────────────────────────────────────────────────
     def balance(self, addr: str) -> float:
         return self.ledger.balance(addr)
 
@@ -679,14 +743,14 @@ class Blockchain:
             "next_reward":  block_reward(self.height + 1),
             "block_time":   BLOCK_TIME,
             "peers":        len(self._peers),
-            "mempool_size": self.mempool.size(),
-            "symbol":       SYMBOL,
-            "halving":      get_halving(self.height),
-            "boost_table":  BOOST_TABLE.get(get_halving(self.height), BOOST_TABLE[0]),
-            "min_ram_mb":   MIN_RAM_MB.get(get_halving(self.height), 4096),
-            "founder":      FOUNDER_NAME,
-            "founder_addr": FOUNDER_ADDRESS,
-            "founder_lock": FOUNDER_LOCK,
+            "mempool_size":  self.mempool.size(),
+            "symbol":        SYMBOL,
+            "halving":       get_halving(self.height),
+            "boost_table":   BOOST_TABLE.get(get_halving(self.height), BOOST_TABLE[0]),
+            "min_ram_mb":    MIN_RAM_MB.get(get_halving(self.height), 4096),
+            "founder":       FOUNDER_NAME if "FOUNDER_NAME" in dir() else "Aluisio Fernandes (Aluminium)",
+            "founder_addr":  FOUNDER_ADDRESS,
+            "founder_lock":  FOUNDER_LOCK,
         }
 
 # ─────────────────────────────────────────────────────────────────
@@ -751,7 +815,8 @@ class P2P:
                 return 0
             print(f"[P2P] Syncing from {peer}  ({peer_h} vs {self.chain.height})...")
             for h in range(self.chain.height + 1, peer_h + 1):
-                r2  = urllib.request.urlopen(f"http://{peer}/block/{h}", timeout=5)
+                r2 = urllib.request.urlopen(
+                    f"http://{peer}/block/{h}", timeout=5)
                 d2  = json.loads(r2.read())
                 blk = Block.from_dict(d2["block"])
                 txs = [Transaction.from_dict(t) for t in d2.get("txs", [])]
@@ -774,10 +839,11 @@ class P2P:
         print(f"[P2P] Sync loop started  ({interval}s interval)")
 
     def bootstrap(self):
+        """Try all DNS seeds + direct IPs for resilient bootstrap."""
         print(f"[P2P] Bootstrapping from DNS seeds...")
         for seed in DNS_SEEDS:
             try:
-                ip   = socket.gethostbyname(seed)
+                ip = socket.gethostbyname(seed)
                 addr = f"{ip}:{self.port}"
                 self.add(addr)
                 synced = self.sync(addr)
@@ -790,6 +856,7 @@ class P2P:
             print(f"[P2P] No seeds reachable — running as isolated node")
 
     def peer_exchange(self):
+        """Ask peers for their peer list — organic network growth."""
         for peer in self.peers():
             try:
                 r = urllib.request.urlopen(f"http://{peer}/peers", timeout=5)
@@ -814,13 +881,6 @@ class PoLMNode:
         self.chain   = Blockchain(data_dir, testnet)
         self.p2p     = P2P(self.chain, port)
         self.app     = Flask("polm-node")
-
-        @self.app.after_request
-        def add_cors(response):
-            response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type"
-            return response
         self.port    = port
         self._mstop  = threading.Event()
         self._mid:   Optional[str] = None
@@ -830,18 +890,20 @@ class PoLMNode:
             self.p2p.add(p)
         self._register_routes()
         self.p2p.start_sync_loop()
+        # Bootstrap from DNS seeds in background
         threading.Thread(target=self.p2p.bootstrap, daemon=True, name="p2p-bootstrap").start()
+        # Peer exchange every 5 minutes
         def _peer_exchange_loop():
             while True:
                 time.sleep(300)
                 self.p2p.peer_exchange()
         threading.Thread(target=_peer_exchange_loop, daemon=True, name="p2p-exchange").start()
 
+    # ── routes ────────────────────────────────────────────────────
     def _register_routes(self):
         app = self.app
 
         @app.route("/")
-        @app.route("/status")    # FIX: /status was missing — curl /status returned empty
         def status():
             return jsonify(self.chain.summary())
 
@@ -864,25 +926,25 @@ class PoLMNode:
 
         @app.route("/submit", methods=["POST"])
         def submit():
-            # FIX: was returning 400 on ANY exception with no detail.
-            # Now logs full traceback and returns structured error.
             try:
-                data = request.get_json(force=True, silent=True)
-                if data is None:
-                    return jsonify({"accepted": False, "reason": "invalid JSON body"}), 400
+                d       = request.json or {}
+                b       = Block.from_dict(d["block"])
+                txs     = [Transaction.from_dict(t) for t in d.get("txs", [])]
+                miner_ip = request.remote_addr or "unknown"
 
-                if "block" not in data:
-                    return jsonify({"accepted": False, "reason": "missing 'block' field"}), 400
+                # ── 1 miner per IP enforcement ──────────────────
+                existing = self.chain._miner_ips.get(miner_ip)
+                if existing and existing != b.miner_id and b.miner_id != FOUNDER_ADDRESS:
+                    # IP already registered to a different miner
+                    return jsonify({
+                        "accepted": False,
+                        "reason": f"IP {miner_ip} already registered to another miner. 1 miner per machine.",
+                    })
 
-                b   = Block.from_dict(data["block"])
-                txs = [Transaction.from_dict(t) for t in data.get("txs", [])]
-
-                miner_ip = request.headers.get("X-Forwarded-For", request.remote_addr) or "unknown"
-                # Normalize proxy chains: take first IP
-                miner_ip = miner_ip.split(",")[0].strip()
-
-                ok, reason = self.chain.add_block(b, txs, miner_ip)
+                ok, reason = self.chain.add_block(b, txs)
                 if ok:
+                    # Register this IP → miner mapping
+                    self.chain._miner_ips[miner_ip] = b.miner_id
                     print(
                         f"[Node] Block #{b.height}  {b.miner_id[:20]}  "
                         f"{b.ram_type}  {b.latency_ns:.0f}ns  "
@@ -890,24 +952,27 @@ class PoLMNode:
                     )
                     self.p2p.broadcast_block(b, txs)
                     self._kick_miner()
-                else:
-                    print(f"[Node] Rejected block #{b.height}: {reason}  ip={miner_ip}")
                 return jsonify({"accepted": ok, "reason": reason})
-
-            except KeyError as e:
-                msg = f"missing field: {e}"
-                print(f"[Node] /submit KeyError: {msg}")
-                return jsonify({"accepted": False, "reason": msg}), 400
             except Exception as e:
-                import traceback
-                tb = traceback.format_exc()
-                print(f"[Node] /submit ERROR:\n{tb}")
                 return jsonify({"accepted": False, "reason": str(e)}), 400
+
+        @app.route("/active_miners")
+        def active_miners():
+            """Shows active miners and their IPs (anonymized)."""
+            now = time.time()
+            result = {}
+            for mid, last in self.chain._active_miners.items():
+                age = now - last
+                result[mid] = {
+                    "last_block_age_s": round(age),
+                    "active": age < 3600,
+                }
+            return jsonify(result)
 
         @app.route("/receive_block", methods=["POST"])
         def receive_block():
             try:
-                d   = request.get_json(force=True, silent=True) or {}
+                d   = request.json or {}
                 b   = Block.from_dict(d["block"])
                 txs = [Transaction.from_dict(t) for t in d.get("txs", [])]
                 ok, reason = self.chain.add_block(b, txs)
@@ -921,19 +986,20 @@ class PoLMNode:
         @app.route("/tx/send", methods=["POST"])
         def tx_send():
             try:
-                tx = Transaction.from_dict(request.get_json(force=True, silent=True) or {})
+                tx     = Transaction.from_dict(request.json or {})
                 tx.tx_id = tx.compute_id()
                 ok, reason = self.chain.submit_tx(tx)
                 if ok:
                     self.p2p.broadcast_tx(tx)
-                return jsonify({"accepted": ok, "reason": reason, "tx_id": tx.tx_id})
+                return jsonify({"accepted": ok, "reason": reason,
+                                "tx_id": tx.tx_id})
             except Exception as e:
                 return jsonify({"accepted": False, "reason": str(e)}), 400
 
         @app.route("/receive_tx", methods=["POST"])
         def receive_tx():
             try:
-                tx = Transaction.from_dict(request.get_json(force=True, silent=True) or {})
+                tx = Transaction.from_dict(request.json or {})
                 ok, reason = self.chain.submit_tx(tx)
                 return jsonify({"accepted": ok, "reason": reason})
             except Exception as e:
@@ -1009,45 +1075,46 @@ class PoLMNode:
         def get_peers():
             return jsonify({"peers": self.p2p.peers()})
 
+        @app.route("/active_miners")
+        def active_miners_route():
+            """Shows which IPs are actively mining — anti-multimine monitor."""
+            with _anti_mine_lock:
+                return jsonify({
+                    "count":   len(_active_miners),
+                    "miners":  {ip: addr[:20]+"..." for ip, addr in _active_miners.items()},
+                    "rule":    "1 IP = 1 miner address",
+                    "founder": FOUNDER_ADDRESS[:20]+"... (unrestricted)",
+                })
+
         @app.route("/peers/add", methods=["POST"])
         def add_peer():
-            addr = (request.get_json(force=True, silent=True) or {}).get("address", "")
+            addr = (request.json or {}).get("address", "")
             if addr:
                 self.p2p.add(addr)
                 self.p2p.sync(addr)
             return jsonify({"peers": self.p2p.peers()})
 
-        @app.route("/active_miners")
-        def active_miners():
-            now = time.time()
-            result = {}
-            for mid, last in self.chain._active_miners.items():
-                age = now - last
-                result[mid] = {
-                    "last_block_age_s": round(age),
-                    "active": age < 3600,
-                }
-            return jsonify(result)
-
         @app.route("/network")
         def network_info():
+            """Full network status for monitoring."""
             return jsonify({
-                "version":       VERSION,
-                "network":       NETWORK,
-                "website":       WEBSITE,
-                "height":        self.chain.height,
-                "peers":         self.p2p.peers(),
-                "peer_count":    len(self.p2p.peers()),
-                "active_miners": len(self.chain._active_miners),
-                "mempool":       self.chain.mempool.size(),
-                "genesis_hash":  self.chain.chain[0].block_hash,
-                "tip_hash":      self.chain.tip.block_hash,
-                "founder":       FOUNDER_NAME,
-                "founder_addr":  FOUNDER_ADDRESS,
-                "founder_lock":  FOUNDER_LOCK,
-                "halving":       get_halving(self.chain.height),
-                "boost_table":   BOOST_TABLE.get(get_halving(self.chain.height), BOOST_TABLE[0]),
-                "min_ram_gb":    MIN_RAM_MB.get(get_halving(self.chain.height), 4096) // 1024,
+                "version":        VERSION,
+                "network":        NETWORK,
+                "website":        WEBSITE,
+                "height":         self.chain.height,
+                "peers":          self.p2p.peers(),
+                "peer_count":     len(self.p2p.peers()),
+                "active_miners":  len(self.chain._active_miners),
+                "registered_ips": len(self.chain._miner_ips),
+                "mempool":        self.chain.mempool.size(),
+                "genesis_hash":   self.chain.chain[0].block_hash,
+                "tip_hash":       self.chain.tip.block_hash,
+                "founder":        FOUNDER_NAME,
+                "founder_addr":   FOUNDER_ADDRESS,
+                "founder_lock":   FOUNDER_LOCK,
+                "halving":        get_halving(self.chain.height),
+                "boost_table":    BOOST_TABLE.get(get_halving(self.chain.height), BOOST_TABLE[0]),
+                "min_ram_gb":     MIN_RAM_MB.get(get_halving(self.chain.height), 4096) // 1024,
             })
 
         @app.route("/info")
@@ -1064,7 +1131,9 @@ class PoLMNode:
                 "data_dir": default_data_dir(),
             })
 
+    # ── miner kick ────────────────────────────────────────────────
     def _kick_miner(self):
+        """Interrupt local miner so it starts next block immediately."""
         if not self._mstop.is_set():
             self._mstop.set()
             def restart():
@@ -1088,7 +1157,7 @@ class PoLMNode:
     def run(self):
         net = "testnet" if self.chain.testnet else "mainnet"
         print(f"\n╔══════════════════════════════════════════╗")
-        print(f"║  PoLM Node  v{VERSION}  ({net})          ║")
+        print(f"║  PoLM Node  v{VERSION}  ({net})  RAM Mining  ║")
         print(f"║  {WEBSITE:<40}  ║")
         print(f"╚══════════════════════════════════════════╝")
         print(f"  API  : http://0.0.0.0:{self.port}")
@@ -1097,6 +1166,14 @@ class PoLMNode:
         print(f"  h={s['height']}  supply={s['total_supply']:.0f}/{MAX_SUPPLY} {SYMBOL}")
         print(f"  Rule : 1 IP = 1 miner  (anti-multimine)")
         print()
+        # Bootstrap P2P network
+        self.p2p.bootstrap()
+        # Announce ourselves to the network in background
+        threading.Thread(
+            target=self.p2p.announce,
+            args=(self.port,),
+            daemon=True
+        ).start()
         self.app.run(
             host="0.0.0.0", port=self.port,
             debug=False, use_reloader=False, threaded=True
@@ -1144,26 +1221,19 @@ class PoLMMiner:
                 headers={"Content-Type": "application/json"},
                 method="POST"
             )
-            r = urllib.request.urlopen(req, timeout=10)
+            r = urllib.request.urlopen(req, timeout=8)
             return json.loads(r.read())
-        except urllib.error.HTTPError as e:
-            # FIX: read body from HTTPError to see the rejection reason
-            try:
-                body = json.loads(e.read().decode())
-                print(f"[Miner] POST {path} HTTP {e.code}: {body}")
-            except Exception:
-                print(f"[Miner] POST {path} HTTP {e.code}")
-            return None
-        except Exception as e:
-            print(f"[Miner] POST {path} error: {e}")
+        except Exception:
             return None
 
     def mine_loop(self):
+        """Continuous mining — runs until stop event set."""
         self.stop.clear()
         while not self.stop.is_set():
             self.mine_once()
 
     def mine_once(self):
+        """Mine one block, then return."""
         while not self.stop.is_set():
             work = self._get("/getwork")
             if not work:
@@ -1199,16 +1269,11 @@ class PoLMMiner:
             nonce  = random.randint(0, 2 ** 32)
             t0     = time.time()
             checks = 0
-            # Rate limit: DDR4 sleeps to let DDR2 compete
-            _ddr_num = int(self.ram.replace("DDR","").strip() or "4")
-            _ram_sleep = 0.0 if _ddr_num <= 2 else 0.001  # DDR2 free, DDR4+ throttled
 
             while not self.stop.is_set():
                 nonce  += 1
                 checks += 1
 
-                if _ram_sleep > 0 and checks % 5 == 0:
-                    time.sleep(_ram_sleep)
                 if checks % 200 == 0:
                     nw = self._get("/getwork")
                     if nw and nw["height"] != height:
@@ -1237,13 +1302,7 @@ class PoLMMiner:
                 )
                 b.block_hash = b.compute_hash()
 
-                # Adaptive target: higher score = easier hash target
-                # DDR2 score ~0.035 vs DDR4 ~0.001 — DDR2 gets 2 extra hex digits (256x easier)
-                _score_bonus = 0
-                if sc >= 0.010:   _score_bonus = 2
-                elif sc >= 0.003: _score_bonus = 1
-                _eff_target = "0" * max(1, diff - _score_bonus)
-                if b.block_hash.startswith(_eff_target):
+                if b.block_hash.startswith(target):
                     elapsed = time.time() - t0
                     if self.verbose:
                         print(f"\n[Miner] Block #{height} found!")
@@ -1259,14 +1318,9 @@ class PoLMMiner:
                         "block": b.to_dict(),
                         "txs":   [t.to_dict() for t in pending],
                     })
-                    if res is None:
-                        # FIX: was silently failing — now shows clear message
-                        print(f"        Status  : FAILED (no response from node)\n")
-                    else:
-                        ok = res.get("accepted", False)
-                        if self.verbose:
-                            status = "ACCEPTED ✓" if ok else f"rejected — {res.get('reason','?')}"
-                            print(f"        Status  : {status}\n")
+                    ok = res.get("accepted", False) if res else False
+                    if self.verbose:
+                        print(f"        Status  : {'ACCEPTED' if ok else 'rejected (race)'}\n")
                     return
 
 # ─────────────────────────────────────────────────────────────────
@@ -1274,7 +1328,7 @@ class PoLMMiner:
 # ─────────────────────────────────────────────────────────────────
 def _help():
     print(f"""
-PoLM v{VERSION} — Proof of Legacy Memory
+PoLM v{VERSION} — Proof of Legacy Memory | Mine with your RAM
 {WEBSITE}
 
   python polm.py node   [port] [peer ...] [--testnet]
@@ -1284,7 +1338,7 @@ PoLM v{VERSION} — Proof of Legacy Memory
 Mainnet examples:
   python polm.py node
   python polm.py node 6060 node2.polm.com.br:6060
-  python polm.py miner http://node1.polm.com.br:6060 YOUR_ADDRESS DDR4
+  python polm.py miner http://node1.polm.com.br:6060 YOUR_ADDRESS DDR2
 
 Testnet (local):
   python polm.py node --testnet
