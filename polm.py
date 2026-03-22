@@ -1199,11 +1199,16 @@ class PoLMMiner:
             nonce  = random.randint(0, 2 ** 32)
             t0     = time.time()
             checks = 0
+            # Rate limit: DDR4 sleeps to let DDR2 compete
+            _ddr_num = int(self.ram.replace("DDR","").strip() or "4")
+            _ram_sleep = max(0.0, (_ddr_num - 2) * 0.0001)
 
             while not self.stop.is_set():
                 nonce  += 1
                 checks += 1
 
+                if _ram_sleep > 0 and checks % 5 == 0:
+                    time.sleep(_ram_sleep)
                 if checks % 200 == 0:
                     nw = self._get("/getwork")
                     if nw and nw["height"] != height:
