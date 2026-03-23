@@ -493,9 +493,9 @@ class Block:
 # PROOF-OF-LEGACY-MEMORY ALGORITHM
 # ─────────────────────────────────────────────────────────────────
 def dynamic_boost(lat_ns: float, ram_type: str = "DDR4", height: int = 0) -> float:
-    # Pure latency — no artificial boost by RAM type
-    # Higher latency naturally scores higher
+    """Pure latency — no boost. score = 1/latency_ns."""
     return 1.0
+
 
 def sat_penalty(threads: int) -> float:
     """No penalty — all thread counts welcome. Max 4 threads enforced at get_threads()."""
@@ -1270,8 +1270,7 @@ class PoLMMiner:
                 if lat < 5:
                     continue
 
-                boost = dynamic_boost(lat, self.ram, height)
-                sc    = compute_score(lat, boost, self.threads)
+                sc    = compute_score(lat, 1.0, self.threads)
 
                 b = Block(
                     height=height, prev_hash=prev,
@@ -1293,7 +1292,7 @@ class PoLMMiner:
                         print(f"        Nonce   : {nonce:,}")
                         print(f"        Time    : {elapsed:.2f}s")
                         print(f"        Latency : {lat:.1f}ns")
-                        print(f"        Boost   : {boost:.3f}x  (dynamic)")
+                        print(f"        Boost   : 1.000x  (pure latency)")
                         print(f"        Score   : {sc:.8f}")
                         print(f"        Reward  : {reward} {SYMBOL}")
                         print(f"        Txs     : {len(pending)}")
