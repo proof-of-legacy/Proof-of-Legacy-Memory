@@ -1077,6 +1077,37 @@ class PoLMNode:
                     "founder": FOUNDER_ADDRESS[:20]+"... (unrestricted)",
                 })
 
+        @app.route("/register_evm", methods=["POST", "GET"])
+        def register_evm():
+            """Register EVM (Polygon) address for a native POLM miner address."""
+            import os
+            evm_map_file = os.path.join(default_data_dir(), "evm_addresses.json")
+            # Load existing map
+            evm_map = {}
+            if os.path.exists(evm_map_file):
+                try:
+                    with open(evm_map_file) as f:
+                        evm_map = json.load(f)
+                except Exception:
+                    pass
+            if request.method == "GET":
+                polm_addr = request.args.get("polm_address", "")
+                if polm_addr:
+                    return jsonify({"polm_address": polm_addr, "evm_address": evm_map.get(polm_addr, "")})
+                return jsonify({"registered": len(evm_map), "mappings": {k: v for k, v in evm_map.items()}})
+            # POST — register
+            data = request.json or {}
+            polm_address = data.get("polm_address", "").strip()
+            evm_address  = data.get("evm_address", "").strip()
+            if not polm_address or not polm_address.startswith("POLM"):
+                return jsonify({"ok": False, "error": "Invalid POLM address"}), 400
+            if not evm_address or not evm_address.startswith("0x") or len(evm_address) != 42:
+                return jsonify({"ok": False, "error": "Invalid EVM address (must be 0x + 40 hex chars)"}), 400
+            evm_map[polm_address] = evm_address
+            with open(evm_map_file, "w") as f:
+                json.dump(evm_map, f, indent=2)
+            return jsonify({"ok": True, "polm_address": polm_address, "evm_address": evm_address})
+
         @app.route("/peers/add", methods=["POST"])
         def add_peer():
             addr = (request.json or {}).get("address", "")
@@ -1372,7 +1403,56 @@ if __name__ == "__main__":
         url     = args[1] if len(args) > 1 else "http://localhost:6060"
         address = args[2] if len(args) > 2 else "Anonymous"
         ram     = args[3] if len(args) > 3 else detect_ram()
-        miner   = PoLMMiner(url, address, ram, testnet)
+
+        # Ask for EVM address on first run or if not registered
+        import urllib.request as _ur
+        import json as _json
+        try:
+            _r = _ur.urlopen(f"{url.rstrip('/')}/register_evm?polm_address={address}", timeout=5)
+            _d = _json.loads(_r.read())
+            _evm = _d.get("evm_address", "")
+        except Exception:
+            _evm = ""
+
+        if not _evm:
+            print()
+            print("=" * 55)
+            print("  POLM Bridge Setup — First Time Configuration")
+            print("=" * 55)
+            print(f"  Your POLM address: {address[:32]}...")
+            print()
+            print("  To claim your mined POLM on Polygon (MetaMask/Trust),")
+            print("  enter your Polygon wallet address (0x...).")
+            print("  You can skip this and register later at:")
+            print("  https://polm.com.br/claim")
+            print()
+            _evm_input = input("  Polygon/Trust wallet (0x...) or ENTER to skip: ").strip()
+            if _evm_input.startswith("0x") and len(_evm_input) == 42:
+                try:
+                    _payload = _json.dumps({"polm_address": address, "evm_address": _evm_input}).encode()
+                    _req = _ur.Request(
+                        f"{url.rstrip('/')}/register_evm",
+                        data=_payload,
+                        headers={"Content-Type": "application/json"},
+                        method="POST"
+                    )
+                    _res = _json.loads(_ur.urlopen(_req, timeout=5).read())
+                    if _res.get("ok"):
+                        print(f"  ✓ Registered! You can claim at https://polm.com.br/claim")
+                    else:
+                        print(f"  Warning: {_res.get('error', 'Could not register')}")
+                except Exception as _e:
+                    print(f"  Warning: Could not register EVM address: {_e}")
+            elif _evm_input:
+                print("  Invalid address — skipping. Register later at https://polm.com.br/claim")
+            else:
+                print("  Skipped. Register later at https://polm.com.br/claim")
+            print("=" * 55)
+            print()
+        else:
+            print(f"[Miner] Polygon wallet: {_evm[:20]}...")
+
+        miner = PoLMMiner(url, address, ram, testnet)
         miner.mine_loop()
 
     else:
