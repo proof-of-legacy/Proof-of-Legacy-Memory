@@ -111,9 +111,20 @@ def load_evm_map() -> dict:
     return {}
 
 def get_miner_evm(miner_polm: str) -> Optional[str]:
+    # 1. Check local map
     evm_map = load_evm_map()
     if miner_polm in evm_map:
         return evm_map[miner_polm]
+    # 2. Check node /register_evm endpoint
+    d = fetch_node(f'/register_evm?polm_address={miner_polm}')
+    if d and d.get('evm_address'):
+        evm = d['evm_address']
+        if len(evm) == 42 and evm.startswith('0x'):
+            # Cache locally
+            evm_map[miner_polm] = evm
+            json.dump(evm_map, open(EVM_MAP_FILE, 'w'), indent=2)
+            return evm
+    # 3. Check /miners endpoint
     miners = fetch_node('/miners')
     if miners and miner_polm in miners:
         evm = miners[miner_polm].get('evm_address', '')
@@ -202,7 +213,7 @@ def send_batch(w3, contract, oracle_account, pending_blocks: list) -> list:
     if not pending_blocks:
         return []
 
-    CHUNK_SIZE = 10  # max per tx to stay under 131KB limit
+    CHUNK_SIZE = 50  # max per tx to stay under 131KB limit
     registered = []
     chunks = [pending_blocks[i:i+CHUNK_SIZE] for i in range(0, len(pending_blocks), CHUNK_SIZE)]
     log.info(f'Sending {len(pending_blocks)} blocks in {len(chunks)} chunks...')
