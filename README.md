@@ -50,14 +50,30 @@ Most Proof-of-Work algorithms reward whoever has the most powerful hardware. PoL
 - **Score = 1 / latency_ns** — pure physics, nothing else
 - **Any RAM mines** — DDR2 to DDR5, all generations compete honestly
 
-> Slower RAM scores higher per nonce; faster RAM compensates with more nonces per second.
-> By Epoch 7, mining requires 1 TB RAM → a new hardware industry emerges.
-
 ---
 
 ## Quick Start
 
-### Linux / macOS
+### 🪟 Windows (GUI — recommended)
+
+1. Install **Python 3.9+** from [python.org](https://www.python.org/downloads/) *(check "Add to PATH")*
+2. Download this repository as ZIP and extract
+3. Double-click **`scripts/install_windows.bat`**
+4. Double-click **`start_miner.bat`**
+5. Enter your Polygon/Trust wallet address
+6. Click **START MINING** ⛏
+
+### 🐧 Linux / macOS (GUI)
+
+```bash
+git clone https://github.com/proof-of-legacy/Proof-of-Legacy-Memory.git
+cd Proof-of-Legacy-Memory
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python3 polm_miner_gui.py
+```
+
+### 🐧 Linux / macOS (Command line)
 
 ```bash
 git clone https://github.com/proof-of-legacy/Proof-of-Legacy-Memory.git
@@ -71,9 +87,6 @@ python3 polm_bip39.py new "My Wallet"
 # Start mining
 python3 polm.py miner https://polm.com.br/api/ YOUR_POLM_ADDRESS
 ```
-
-### Windows ⚠️
-> **Windows miner with GUI — coming soon!**
 
 ---
 
@@ -112,8 +125,6 @@ No favorites. No losers. Every generation contributes honestly to the network.
 ---
 
 ## Epoch Schedule
-
-Every 100,000 blocks (~138 days), the DAG doubles and the block reward halves.
 
 | Epoch | Blocks | ~Days | DAG | Min RAM | Reward | Who mines? |
 |-------|--------|-------|-----|---------|--------|-----------|
@@ -167,25 +178,10 @@ Every 100,000 blocks (~138 days), the DAG doubles and the block reward halves.
 | Parameter | Value |
 |-----------|-------|
 | Native address | POLMD872771E5F0017C5B5C08D353B5E7B4B |
-| Polygon allocation | 10,500,000 POLM (5%) |
-| Lock | 5,256,000 blocks (~5 years) |
+| Polygon address | 0xFFC18CB440B0CDCa072caa0A3DFcA6c049d9262b |
+| Polygon allocation | **10,500,000 POLM (5%)** |
+| Lock | **5,256,000 blocks (~5 years) — smart contract enforced** |
 | Founder | Aluísio Fernandes (Aluminium) — @aluisiofer |
-
----
-
-## REST API
-
-| Endpoint | Method | Description |
-|---------|--------|-------------|
-| `/` | GET | Node status + chain summary |
-| `/getwork` | GET | Mining job + pending transactions |
-| `/submit` | POST | Submit mined block |
-| `/tx/send` | POST | Broadcast transaction |
-| `/chain` | GET | Block list (?limit=N&offset=N) |
-| `/block/<h>` | GET | Block + transactions |
-| `/balance/<addr>` | GET | Address balance |
-| `/miners` | GET | Mining leaderboard |
-| `/peers` | GET | Connected peers |
 
 ---
 
@@ -196,7 +192,8 @@ Every 100,000 blocks (~138 days), the DAG doubles and the block reward halves.
 | ASIC | 256 MB+ DAG + latency-hard walk — DRAM physics can't be miniaturized |
 | GPU | GDDR latency ≥ DDR latency — no advantage |
 | Cache exploit | Latency < 5ns → block rejected |
-| Fake RAM | Score measures real latency, not declared type |
+| Fake RAM | Score measures real latency, not declared type — hardware auto-detected |
+| Manual RAM override | GUI detects RAM from hardware — cannot be overridden by user |
 | Oracle fraud | ECDSA signature required on every block registration |
 | Rug pull | Founder locked 5 years on-chain — smart contract enforced |
 
@@ -205,13 +202,34 @@ Every 100,000 blocks (~138 days), the DAG doubles and the block reward halves.
 ## Files
 
 ```
-polm.py              ← Full node + miner (Linux / macOS)
-polm_explorer.py     ← Blockchain explorer v2.2.0
-polm_bip39.py        ← BIP-39/BIP-32 HD wallet
-polm_wallet.py       ← Web wallet UI + CLI
-polm_bridge_oracle.py← Polygon bridge oracle (ECDSA)
-requirements.txt     ← flask cryptography mnemonic requests
+polm.py               ← Full node + miner (Linux / macOS CLI)
+polm_miner_gui.py     ← GUI miner (Windows / Linux / macOS)
+polm_explorer.py      ← Blockchain explorer v2.2.0
+polm_bip39.py         ← BIP-39/BIP-32 HD wallet
+polm_wallet.py        ← Web wallet UI + CLI
+polm_bridge_oracle.py ← Polygon bridge oracle (ECDSA)
+requirements.txt      ← flask cryptography mnemonic requests
+scripts/
+├── install_windows.bat ← Windows one-click installer
+└── install.sh          ← Linux / macOS installer
 ```
+
+---
+
+## REST API
+
+| Endpoint | Method | Description |
+|---------|--------|-------------|
+| `/` | GET | Node status + chain summary |
+| `/getwork` | GET | Mining job + pending transactions |
+| `/submit` | POST | Submit mined block |
+| `/register_evm` | POST | Register Polygon wallet address |
+| `/tx/send` | POST | Broadcast transaction |
+| `/chain` | GET | Block list (?limit=N&offset=N) |
+| `/block/<h>` | GET | Block + transactions |
+| `/balance/<addr>` | GET | Address balance |
+| `/miners` | GET | Mining leaderboard |
+| `/peers` | GET | Connected peers |
 
 ---
 
@@ -223,13 +241,13 @@ requirements.txt     ← flask cryptography mnemonic requests
 - [x] Polygon ERC-20 contract — verified + founder lock 5 years
 - [x] Oracle ECDSA — auto-sustaining bridge
 - [x] Claim page — polm.com.br/claim
-- [ ] Windows miner with GUI — coming soon
-- [ ] DEX listing — QuickSwap (Polygon) — coming soon
+- [x] **GUI miner — Windows / Linux / macOS (polm_miner_gui.py)**
+- [x] `/register_evm` API — automatic Polygon wallet registration
+- [ ] DEX listing — QuickSwap (Polygon) — **coming soon**
 - [ ] CoinMarketCap / CoinGecko listing
-- [ ] macOS miner
 - [ ] Mining pool
 - [ ] CEX listing
-- [ ] RAM mining board ecosystem (Epoch 7 target — 1 TB arrays)
+- [ ] RAM mining board ecosystem (Epoch 7 — 1 TB arrays)
 
 ---
 
