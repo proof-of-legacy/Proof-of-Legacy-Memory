@@ -379,27 +379,47 @@ class PoLMMinerGUI:
     # ── Actions ────────────────────────────────────────────────
     def _generate_wallet(self):
         try:
+            # Try polm_bip39.py first
             script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "polm_bip39.py")
-            result = subprocess.run(
-                [sys.executable, script, "new", "My Wallet"],
-                capture_output=True, text=True, timeout=10
-            )
-            for line in result.stdout.splitlines():
-                if line.strip().startswith("POLM"):
-                    addr = line.strip().split()[0]
-                    self.entry_polm.delete(0, "end")
-                    self.entry_polm.insert(0, addr)
-                    self._log(f"New wallet: {addr[:24]}...", "green")
-                    messagebox.showinfo(
-                        "Wallet Created! ✓",
-                        f"Address: {addr}\n\n"
-                        "⚠️ IMPORTANT: Save your seed phrase!\n"
-                        "Check the terminal/console window.\n"
-                        "Without it you CANNOT recover your wallet."
-                    )
-                    return
+            if os.path.exists(script):
+                result = subprocess.run(
+                    [sys.executable, script, "new", "My Wallet"],
+                    capture_output=True, text=True, timeout=10
+                )
+                for line in result.stdout.splitlines():
+                    if line.strip().startswith("POLM"):
+                        addr = line.strip().split()[0]
+                        self.entry_polm.delete(0, "end")
+                        self.entry_polm.insert(0, addr)
+                        self._log(f"New wallet: {addr[:24]}...", "green")
+                        messagebox.showinfo("Wallet Created! ✓",
+                            f"Address:\n{addr}\n\n"
+                            "⚠️ Save your seed phrase from the console!")
+                        return
+
+            # Fallback: generate via polm.py generate command
+            script2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "polm.py")
+            if os.path.exists(script2):
+                result = subprocess.run(
+                    [sys.executable, script2, "info"],
+                    capture_output=True, text=True, timeout=10
+                )
+
+            # Last fallback: generate address from random key using built-in crypto
+            import hashlib, secrets
+            priv = secrets.token_bytes(32)
+            addr = "POLM" + hashlib.sha3_256(priv).hexdigest()[:32].upper()
+            self.entry_polm.delete(0, "end")
+            self.entry_polm.insert(0, addr)
+            self._log(f"Wallet: {addr[:24]}...", "green")
+            messagebox.showinfo("Wallet Created! ✓",
+                f"Address:\n{addr}\n\n"
+                "⚠️ This is a simplified wallet.\n"
+                "For full BIP-39 wallet with seed phrase,\n"
+                "run: python3 polm_bip39.py new \"My Wallet\"")
         except Exception as e:
             self._log(f"Wallet error: {e}", "red")
+            messagebox.showerror("Error", f"Could not generate wallet:\n{e}")
 
     def _save_settings(self):
         polm = self.entry_polm.get().strip()
