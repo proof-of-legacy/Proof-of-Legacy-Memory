@@ -1,0 +1,99 @@
+name: Build Windows Miner EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install pyinstaller
+        pip install -r requirements.txt
+
+    - name: Verify source integrity
+      run: |
+        python -c "
+        content = open('polm.py', 'r', encoding='utf-8').read()
+        required = ['score = 1 / lat_ns', 'SHA3', 'register_evm']
+        found = sum(1 for r in required if r in content)
+        assert found >= 2, 'polm.py integrity check failed!'
+        gui = open('polm_miner_gui.py', 'r', encoding='utf-8').read()
+        assert 'detect_ram_hardware' in gui, 'GUI integrity check failed!'
+        print('Source integrity OK')
+        "
+
+    - name: Build EXE
+      run: |
+        pyinstaller `
+          --onefile `
+          --windowed `
+          --name "PoLM-Miner" `
+          --hidden-import tkinter `
+          --hidden-import tkinter.ttk `
+          --hidden-import tkinter.scrolledtext `
+          --hidden-import cryptography `
+          --hidden-import mnemonic `
+          polm_miner_gui.py
+
+    - name: Generate SHA256 checksum
+      run: |
+        $hash = Get-FileHash dist/PoLM-Miner.exe -Algorithm SHA256
+        $hash.Hash | Out-File -FilePath dist/PoLM-Miner.exe.sha256 -NoNewline
+        Write-Host "SHA256: $($hash.Hash)"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: PoLM-Miner-Windows
+        path: |
+          dist/PoLM-Miner.exe
+          dist/PoLM-Miner.exe.sha256
+        retention-days: 90
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: miner-latest
+        name: "PoLM Miner — Windows"
+        body: |
+          ## ⛏ PoLM Miner for Windows
+          
+          Download `PoLM-Miner.exe` and double-click to start mining!
+          No Python required.
+          
+          ### Verify authenticity (recommended)
+```powershell
+          Get-FileHash PoLM-Miner.exe -Algorithm SHA256
+```
+          Compare with `PoLM-Miner.exe.sha256`
+          **If hash doesn't match — DO NOT RUN.**
+          
+          ### How to use
+          1. Download `PoLM-Miner.exe`
+          2. Double-click to open
+          3. Enter your POLM wallet address
+          4. Enter your Polygon/Trust wallet
+          5. Click **START MINING** ⛏
+          
+          Built from commit: ${{ github.sha }}
+          
+          🌐 https://polm.com.br | 💰 https://polm.com.br/claim
+        files: |
+          dist/PoLM-Miner.exe
+          dist/PoLM-Miner.exe.sha256
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
