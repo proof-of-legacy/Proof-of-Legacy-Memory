@@ -477,6 +477,9 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
     <div class="irow"><span class="ik">GitHub</span><a class="iv hl" href="https://github.com/proof-of-legacy/Proof-of-Legacy-Memory" target="_blank">proof-of-legacy/Proof-of-Legacy-Memory</a></div>
     <div class="irow"><span class="ik">Project Twitter</span><a class="iv hl" href="https://x.com/polm2026" target="_blank">@polm2026</a></div>
     <div class="irow"><span class="ik">Founder</span><a class="iv hl" href="https://x.com/aluisiofer" target="_blank">@aluisiofer (Aluísio Fernandes — Aluminium)</a></div>
+    <div class="irow"><span class="ik">Polygon Token</span><a class="iv hl" href="https://polygonscan.com/token/0x79175931C54c9765E5846229a0eB118ef24fdE55" target="_blank">0x79175931...fdE55</a></div>
+    <div class="irow"><span class="ik">Claim POLM</span><a class="iv hl" href="https://polm.com.br/claim" target="_blank">polm.com.br/claim</a></div>
+    <div class="irow"><span class="ik">Roadmap</span><a class="iv hl" href="https://polm.com.br/roadmap" target="_blank">polm.com.br/roadmap</a></div>
     <div class="irow"><span class="ik">Node API</span><a class="iv hl" href="https://polm.com.br/api/" target="_blank">polm.com.br/api/</a></div>
   </div>
 </div>
@@ -685,6 +688,9 @@ async function loadProto(){
     ['Retarget window','144 blocks (±25%)'],
     ['Max threads','4 per miner'],
     ['Founder lock','5,256,000 blocks (~5yr)'],
+    ['Founder alloc','10,500,000 POLM (5%) locked'],
+    ['Polygon ERC-20','0x79175931C54c9765E5846229a0eB118ef24fdE55'],
+    ['DEX','QuickSwap (coming soon)'],
   ].map(([k,v])=>`<div class="irow"><span class="ik">${k}</span><span class="iv">${v}</span></div>`).join('');
 }
 
