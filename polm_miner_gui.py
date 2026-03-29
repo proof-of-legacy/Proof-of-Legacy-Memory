@@ -81,31 +81,39 @@ def detect_ram_hardware() -> str:
 
     try:
         if system == "Windows":
-            # Method 1: try to get SMBIOSMemoryType (most accurate)
             try:
+                # Use SMBIOSMemoryType — most reliable
                 out = subprocess.check_output(
                     ["wmic", "memorychip", "get", "SMBIOSMemoryType,Speed"],
-                    capture_output=True, text=True, timeout=5
+                    capture_output=True, text=True, timeout=5,
+                    creationflags=0x08000000
                 ).stdout
-                # SMBIOSMemoryType: 26=DDR4, 34=DDR5, 24=DDR3, 21=DDR2
-                if "34" in out: return "DDR5"
-                if "26" in out: return "DDR4"
-                if "24" in out: return "DDR3"
-                if "21" in out: return "DDR2"
-            except Exception:
-                pass
-            # Method 2: use speed to guess
-            try:
-                out = subprocess.check_output(
-                    ["wmic", "memorychip", "get", "speed"],
-                    capture_output=True, text=True, timeout=5
-                ).stdout
-                speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
+                lines = [l.strip() for l in out.splitlines() if l.strip() and not l.startswith('S')]
+                types = []
+                speeds = []
+                for line in lines:
+                    parts = line.split()
+                    if len(parts) >= 1:
+                        for p in parts:
+                            if p.isdigit():
+                                v = int(p)
+                                if v in [20,21,22,24,26,27,28,29,30,34]:
+                                    types.append(v)
+                                elif v > 100:
+                                    speeds.append(v)
+                # SMBIOSMemoryType values
+                if types:
+                    t = max(types)
+                    if t == 34: return "DDR5"
+                    if t in [26,27,28,29,30]: return "DDR4"
+                    if t in [24,25]: return "DDR3"
+                    if t in [21,22]: return "DDR2"
+                # Fallback: speed-based
                 if speeds:
                     avg = sum(speeds) / len(speeds)
                     if avg >= 4800: return "DDR5"
                     if avg >= 2133: return "DDR4"
-                    if avg >=  400: return "DDR3"
+                    if avg >= 800: return "DDR3"
                     return "DDR2"
             except Exception:
                 pass
@@ -661,29 +669,27 @@ class PoLMMinerGUI:
 
 # ── Entry ──────────────────────────────────────────────────────
 def main():
-    # Prevent multiple instances
-    import tempfile, sys
-    lock_file = os.path.join(tempfile.gettempdir(), "polm_miner.lock")
+    # Prevent multiple instances — check by process name
+    import tempfile
     try:
-        import msvcrt
-        lock = open(lock_file, 'w')
-        msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
-    except Exception:
-        try:
-            # Already running
-            existing = open(lock_file).read()
-            if existing.strip().isdigit():
-                import ctypes
-                ctypes.windll.user32.MessageBoxW(0,
-                    "PoLM Miner is already running!\nCheck your taskbar.",
-                    "Already Running", 0x30)
-                sys.exit(0)
-        except Exception:
-            pass
-        try:
-            open(lock_file, 'w').write(str(os.getpid()))
-        except Exception:
-            pass
+        import psutil
+        current_pid = os.getpid()
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                if proc.pid == current_pid:
+                    continue
+                cmdline = ' '.join(proc.info.get('cmdline') or [])
+                name = proc.info.get('name','')
+                if 'PoLM-Miner' in name or 'polm_miner_gui' in cmdline:
+                    import ctypes
+                    ctypes.windll.user32.MessageBoxW(0,
+                        "PoLM Miner is already running!\nCheck your taskbar.",
+                        "Already Running", 0x30)
+                    sys.exit(0)
+            except Exception:
+                pass
+    except ImportError:
+        pass
 
     root = tk.Tk()
     style = ttk.Style()

@@ -23,7 +23,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pip install pyinstaller
+        pip install pyinstaller psutil
         pip install -r requirements.txt
 
     - name: Verify source integrity
@@ -43,6 +43,7 @@ jobs:
         --hidden-import tkinter.scrolledtext
         --hidden-import cryptography
         --hidden-import mnemonic
+        --hidden-import psutil
         --hidden-import flask
         --hidden-import hashlib
         --hidden-import secrets
