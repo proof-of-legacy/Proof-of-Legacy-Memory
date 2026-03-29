@@ -30,7 +30,7 @@ NODE_URL  = "https://polm.com.br/api/"
 CLAIM_URL = "https://polm.com.br/claim"
 EXPLORER  = "https://explorer.polm.com.br"
 GITHUB    = "https://github.com/proof-of-legacy/Proof-of-Legacy-Memory"
-VERSION   = "1.1.0"
+VERSION   = "1.2.0"
 
 # RAM latency ranges (nanoseconds) — physics-based validation
 # If measured latency is outside 3x of expected range → flag as suspicious
