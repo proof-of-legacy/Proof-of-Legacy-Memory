@@ -63,7 +63,21 @@ jobs:
       with:
         tag_name: miner-latest
         name: "PoLM Miner - Windows"
-        body: "PoLM Miner for Windows. Download and double-click. Built from ${{ github.sha }}. https://polm.com.br"
+        body: |
+          PoLM Miner for Windows — double-click to start mining!
+
+          ANTIVIRUS WARNING: Windows Defender may flag this file as suspicious.
+          This is a false positive common with PyInstaller-built executables.
+          The source code is fully open source — you can verify it yourself.
+
+          To run: Right-click the .exe, select "More info", then "Run anyway".
+          Or add an exclusion in Windows Security settings.
+
+          Verify SHA256: Get-FileHash PoLM-Miner.exe -Algorithm SHA256
+          Compare with PoLM-Miner.exe.sha256
+
+          Source: https://github.com/proof-of-legacy/Proof-of-Legacy-Memory
+          Built from ${{ github.sha }}
         files: |
           dist/PoLM-Miner.exe
           dist/PoLM-Miner.exe.sha256
