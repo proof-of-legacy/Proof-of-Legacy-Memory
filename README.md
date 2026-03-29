@@ -54,7 +54,17 @@ Most Proof-of-Work algorithms reward whoever has the most powerful hardware. PoL
 
 ## Quick Start
 
-### 🪟 Windows (GUI — recommended)
+### 🪟 Windows EXE — easiest, no Python needed!
+
+1. Download **[PoLM-Miner.exe](https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/latest)**
+2. Double-click to open
+3. Enter your POLM wallet address
+4. Enter your Polygon/Trust wallet
+5. Click **START MINING** ⛏
+
+> Verify SHA256: `Get-FileHash PoLM-Miner.exe -Algorithm SHA256` and compare with `PoLM-Miner.exe.sha256`
+
+### 🪟 Windows (manual with Python)
 
 1. Install **Python 3.9+** from [python.org](https://www.python.org/downloads/) *(check "Add to PATH")*
 2. Download this repository as ZIP and extract
@@ -159,7 +169,7 @@ No favorites. No losers. Every generation contributes honestly to the network.
 | HD wallet | BIP-39 / BIP-44 |
 | Max threads | 4 per miner |
 | Pre-mine / ICO | None |
-| Founder allocation | 5% · locked 5 years |
+| Founder allocation | 10,500,000 POLM (5%) · locked 5 years |
 
 ### Polygon ERC-20 Bridge
 
@@ -228,7 +238,7 @@ scripts/
 | `/chain` | GET | Block list (?limit=N&offset=N) |
 | `/block/<h>` | GET | Block + transactions |
 | `/balance/<addr>` | GET | Address balance |
-| `/miners` | GET | Mining leaderboard |
+| `/miners` | GET | Mining leaderboard with CPU info |
 | `/peers` | GET | Connected peers |
 
 ---
@@ -261,6 +271,7 @@ scripts/
 | Roadmap | https://polm.com.br/roadmap |
 | Project Twitter | https://x.com/polm2026 |
 | Founder Twitter | https://x.com/aluisiofer |
+| Download EXE | https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/latest |
 | GitHub | https://github.com/proof-of-legacy/Proof-of-Legacy-Memory |
 
 ---
