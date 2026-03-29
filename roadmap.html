@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PoLM Roadmap — Proof of Legacy Memory</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080b0f;
+  --bg2: #0d1117;
+  --bg3: #161b22;
+  --cyan: #00f5d4;
+  --amber: #f5a623;
+  --green: #39d353;
+  --purple: #a371f7;
+  --blue: #58a6ff;
+  --red: #ff4d4d;
+  --t1: #e8edf3;
+  --t2: #8b949e;
+  --t3: #484f58;
+  --border: #21262d;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--sans);
+  min-height: 100vh;
+  padding: 48px 24px;
+  overflow-x: hidden;
+}
+
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(0,245,212,.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,212,.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events:none;
+  z-index:0;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 64px;
+}
+
+.logo-tag {
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--cyan);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  opacity: .8;
+}
+
+.title {
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  line-height: 1;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, var(--t1) 30%, var(--cyan));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subtitle {
+  font-family: var(--mono);
+  font-size: .82rem;
+  color: var(--t2);
+  letter-spacing: .05em;
+}
+
+/* Timeline */
+.timeline {
+  position: relative;
+  padding-left: 40px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg,
+    var(--cyan) 0%,
+    var(--green) 30%,
+    var(--amber) 60%,
+    var(--purple) 80%,
+    rgba(163,113,247,.2) 100%
+  );
+}
+
+/* Phase */
+.phase {
+  position: relative;
+  margin-bottom: 48px;
+  animation: fadeUp .5s ease both;
+}
+
+.phase:nth-child(1) { animation-delay: .1s; }
+.phase:nth-child(2) { animation-delay: .2s; }
+.phase:nth-child(3) { animation-delay: .3s; }
+.phase:nth-child(4) { animation-delay: .4s; }
+.phase:nth-child(5) { animation-delay: .5s; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform: translateY(20px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.phase-dot {
+  position: absolute;
+  left: -34px;
+  top: 18px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: var(--bg);
+}
+
+.phase.done .phase-dot      { border-color: var(--green);  background: var(--green);  box-shadow: 0 0 12px var(--green); }
+.phase.current .phase-dot   { border-color: var(--cyan);   background: var(--cyan);   box-shadow: 0 0 16px var(--cyan); animation: pulse 2s infinite; }
+.phase.soon .phase-dot      { border-color: var(--amber);  background: transparent; }
+.phase.future .phase-dot    { border-color: var(--purple); background: transparent; }
+.phase.longterm .phase-dot  { border-color: var(--t3);     background: transparent; }
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 8px var(--cyan); }
+  50%       { box-shadow: 0 0 24px var(--cyan); }
+}
+
+.phase-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 28px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color .2s;
+}
+
+.phase-card:hover { border-color: var(--t3); }
+
+.phase.done .phase-card    { border-left: 3px solid var(--green); }
+.phase.current .phase-card { border-left: 3px solid var(--cyan); }
+.phase.soon .phase-card    { border-left: 3px solid var(--amber); }
+.phase.future .phase-card  { border-left: 3px solid var(--purple); }
+.phase.longterm .phase-card{ border-left: 3px solid var(--t3); }
+
+.phase-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+}
+.phase.done .phase-card::before    { background: linear-gradient(90deg, var(--green), transparent); }
+.phase.current .phase-card::before { background: linear-gradient(90deg, var(--cyan), transparent); }
+.phase.soon .phase-card::before    { background: linear-gradient(90deg, var(--amber), transparent); }
+.phase.future .phase-card::before  { background: linear-gradient(90deg, var(--purple), transparent); }
+
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.phase-num {
+  font-family: var(--mono);
+  font-size: .65rem;
+  color: var(--t3);
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.phase-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.phase-badge {
+  font-family: var(--mono);
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+
+.badge-done    { color: var(--green);  border-color: rgba(57,211,83,.3);   background: rgba(57,211,83,.08); }
+.badge-current { color: var(--cyan);   border-color: rgba(0,245,212,.3);   background: rgba(0,245,212,.08); }
+.badge-soon    { color: var(--amber);  border-color: rgba(245,166,35,.3);  background: rgba(245,166,35,.08); }
+.badge-future  { color: var(--purple); border-color: rgba(163,113,247,.3); background: rgba(163,113,247,.08); }
+.badge-longterm{ color: var(--t2);     border-color: var(--border);        background: transparent; }
+
+.phase-period {
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--t3);
+  margin-bottom: 16px;
+  letter-spacing: .05em;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: .88rem;
+  line-height: 1.5;
+}
+
+.item-icon {
+  font-size: .9rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.item-text { color: var(--t1); }
+.item-text .dim { color: var(--t2); font-size: .82rem; }
+
+/* Legend */
+.legend {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--t2);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  margin-top: 32px;
+  font-family: var(--mono);
+  font-size: .72rem;
+  color: var(--t3);
+  line-height: 2;
+}
+
+.footer a { color: var(--t2); text-decoration: none; }
+.footer a:hover { color: var(--cyan); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo-tag">polm.com.br / roadmap</div>
+    <h1 class="title">PoLM Roadmap</h1>
+    <p class="subtitle">Proof of Legacy Memory — Building the future, one block at a time</p>
+  </div>
+
+  <div class="timeline">
+
+    <!-- PHASE 1 — DONE -->
+    <div class="phase done">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-num">Phase 01</span>
+          <span class="phase-title">Genesis & Foundation</span>
+          <span class="phase-badge badge-done">✓ Concluído</span>
+        </div>
+        <div class="phase-period">📅 Q1 2026 — Março 2026</div>
+        <div class="items">
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Blockchain nativa PoLM v2.0.0 — SHA3-256 + RAM latency consensus</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Score = 1 / latency_ns — algoritmo puro sem boost artificial</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Minerador Linux — DDR2, DDR3, DDR4, DDR5 todos suportados</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Rede P2P com DNS seeds — network nunca para</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Site polm.com.br + Explorer explorer.polm.com.br</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Contrato ERC-20 na Polygon — verificado Sourcify + Blockscout</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Founder lock 5 anos — 10.5M POLM travados no smart contract</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Oracle ECDSA auto-sustentável — mineradores pagam claim fee</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Página /claim — mineradores já podem sacar POLM na Polygon</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Mainnet ao vivo — +2.500 blocos minerados</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 2 — CURRENT -->
+    <div class="phase current">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-num">Phase 02</span>
+          <span class="phase-title">Growth & Accessibility</span>
+          <span class="phase-badge badge-current">⚡ Em andamento</span>
+        </div>
+        <div class="phase-period">📅 Q2 2026 — Abril / Junho 2026</div>
+        <div class="items">
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Minerador Windows GUI + EXE via GitHub Actions</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Registro de EVM address automático no primeiro start</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">CPU auto-detectado — exibido no leaderboard do explorer</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Campanha de divulgação — Twitter, Discord, WhatsApp, Facebook</span></div>
+          <div class="item"><span class="item-icon">🔄</span><span class="item-text">Liquidez inicial no QuickSwap — par POLM/MATIC</span></div>
+          <div class="item"><span class="item-icon">🔄</span><span class="item-text">Submissão CoinGecko e CoinMarketCap</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 3 — SOON -->
+    <div class="phase soon">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-num">Phase 03</span>
+          <span class="phase-title">Ecosystem & Market</span>
+          <span class="phase-badge badge-soon">⏳ Em breve</span>
+        </div>
+        <div class="phase-period">📅 Q3 2026 — Julho / Setembro 2026</div>
+        <div class="items">
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Listagem em DEX — QuickSwap, SushiSwap (Polygon)</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Minerador macOS — suporte completo ao ecossistema Apple</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Pool de mineração — vários mineradores, recompensa compartilhada</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Dashboard pessoal — minerador acompanha seus blocos e ganhos</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Epoch 1 — DAG 512MB, recompensa 25 POLM/bloco</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Nós públicos adicionais — maior descentralização da rede</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 4 — FUTURE -->
+    <div class="phase future">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-num">Phase 04</span>
+          <span class="phase-title">Decentralization & Scale</span>
+          <span class="phase-badge badge-future">🔮 Futuro</span>
+        </div>
+        <div class="phase-period">📅 Q4 2026 — Outubro / Dezembro 2026</div>
+        <div class="items">
+          <div class="item"><span class="item-icon">💡</span><span class="item-text">Listagem em CEX — corretoras centralizadas</span></div>
+          <div class="item"><span class="item-icon">💡</span><span class="item-text">Carteira PoLM nativa com interface gráfica — HD wallet completa</span></div>
+          <div class="item"><span class="item-icon">💡</span><span class="item-text">Smart contracts nativos na chain PoLM</span></div>
+          <div class="item"><span class="item-icon">💡</span><span class="item-text">API pública documentada para desenvolvedores</span></div>
+          <div class="item"><span class="item-icon">💡</span><span class="item-text">Programa de grants — incentivar desenvolvimento no ecossistema</span></div>
+          <div class="item"><span class="item-icon">💡</span><span class="item-text">Auditoria de segurança do contrato por empresa especializada</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHASE 5 — LONGTERM -->
+    <div class="phase longterm">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-num">Phase 05</span>
+          <span class="phase-title">Legacy & Long Term</span>
+          <span class="phase-badge badge-longterm">🌌 Longo prazo</span>
+        </div>
+        <div class="phase-period">📅 2027 em diante</div>
+        <div class="items">
+          <div class="item"><span class="item-icon">🌟</span><span class="item-text">Epoch 7 — DAG 32GB, min 1TB RAM — era das máquinas de servidor</span></div>
+          <div class="item"><span class="item-icon">🌟</span><span class="item-text">Bridge multi-chain — Ethereum, BSC, Arbitrum</span></div>
+          <div class="item"><span class="item-icon">🌟</span><span class="item-text">Founder unlock — após 5.256.000 blocos (~5 anos)</span></div>
+          <div class="item"><span class="item-icon">🌟</span><span class="item-text">Ecossistema DeFi nativo — DEX, lending, staking</span></div>
+          <div class="item"><span class="item-icon">🌟</span><span class="item-text">PoLM como padrão de consenso por latência de memória</span></div>
+          <div class="item"><span class="item-icon">🌟</span><span class="item-text">Comunidade global de mineradores — qualquer computador, qualquer país</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--green)"></div>
+      Concluído
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--cyan)"></div>
+      Em andamento
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--amber); border-radius:50%"></div>
+      Em breve
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--purple); opacity:.5; border-radius:50%"></div>
+      Futuro
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--t3); border-radius:50%"></div>
+      Longo prazo
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://polm.com.br">polm.com.br</a> ·
+    <a href="https://explorer.polm.com.br">explorer</a> ·
+    <a href="https://github.com/proof-of-legacy/Proof-of-Legacy-Memory">github</a> ·
+    <a href="https://twitter.com/polm2026">@polm2026</a>
+    <br>
+    Mine with any RAM. Latency is truth. 🧠⛏
+    <br>
+    <span style="color:var(--t3)">© 2026 Aluísio Fernandes (Aluminium) · MIT License</span>
+  </div>
+
+</div>
+</body>
+</html>
