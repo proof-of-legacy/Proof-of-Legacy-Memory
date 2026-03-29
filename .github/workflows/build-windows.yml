@@ -66,7 +66,7 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: miner-latest
+        tag_name: v1.2.0
         name: "PoLM Miner - Windows"
         body: |
           PoLM Miner for Windows — double-click to start mining!
