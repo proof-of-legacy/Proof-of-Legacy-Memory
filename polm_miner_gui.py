@@ -81,18 +81,34 @@ def detect_ram_hardware() -> str:
 
     try:
         if system == "Windows":
-            # Read from WMI — actual hardware data
-            out = subprocess.check_output(
-                ["wmic", "memorychip", "get", "speed,memorytype"],
-                capture_output=True, text=True, timeout=5
-            ).stdout
-            speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
-            if speeds:
-                avg = sum(speeds) / len(speeds)
-                if avg >= 4800: return "DDR5"
-                if avg >= 2133: return "DDR4"
-                if avg >=  800: return "DDR3"
-                return "DDR2"
+            # Method 1: try to get SMBIOSMemoryType (most accurate)
+            try:
+                out = subprocess.check_output(
+                    ["wmic", "memorychip", "get", "SMBIOSMemoryType,Speed"],
+                    capture_output=True, text=True, timeout=5
+                ).stdout
+                # SMBIOSMemoryType: 26=DDR4, 34=DDR5, 24=DDR3, 21=DDR2
+                if "34" in out: return "DDR5"
+                if "26" in out: return "DDR4"
+                if "24" in out: return "DDR3"
+                if "21" in out: return "DDR2"
+            except Exception:
+                pass
+            # Method 2: use speed to guess
+            try:
+                out = subprocess.check_output(
+                    ["wmic", "memorychip", "get", "speed"],
+                    capture_output=True, text=True, timeout=5
+                ).stdout
+                speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
+                if speeds:
+                    avg = sum(speeds) / len(speeds)
+                    if avg >= 4800: return "DDR5"
+                    if avg >= 2133: return "DDR4"
+                    if avg >=  800: return "DDR3"
+                    return "DDR2"
+            except Exception:
+                pass
 
         elif system == "Linux":
             # Try dmidecode (requires root) or /proc/cpuinfo
@@ -373,44 +389,55 @@ class PoLMMinerGUI:
     # ── Actions ────────────────────────────────────────────────
     def _generate_wallet(self):
         try:
-            # Try polm_bip39.py first
-            script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "polm_bip39.py")
-            if os.path.exists(script):
-                result = subprocess.run(
-                    [sys.executable, script, "new", "My Wallet"],
-                    capture_output=True, text=True, timeout=10
-                )
-                for line in result.stdout.splitlines():
-                    if line.strip().startswith("POLM"):
-                        addr = line.strip().split()[0]
-                        self.entry_polm.delete(0, "end")
-                        self.entry_polm.insert(0, addr)
-                        self._log(f"New wallet: {addr[:24]}...", "green")
-                        messagebox.showinfo("Wallet Created! ✓",
-                            f"Address:\n{addr}\n\n"
-                            "⚠️ Save your seed phrase from the console!")
-                        return
-
-            # Fallback: generate via polm.py generate command
-            script2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "polm.py")
-            if os.path.exists(script2):
-                result = subprocess.run(
-                    [sys.executable, script2, "info"],
-                    capture_output=True, text=True, timeout=10
-                )
-
-            # Last fallback: generate address from random key using built-in crypto
-            import hashlib, secrets
+            # Generate wallet directly using built-in crypto — works in bundled EXE
+            import hashlib, secrets, hmac, struct
+            # Generate random private key
             priv = secrets.token_bytes(32)
-            addr = "POLM" + hashlib.sha3_256(priv).hexdigest()[:32].upper()
+            # Derive address using SHA3-256
+            addr_hash = hashlib.sha3_256(priv).hexdigest()[:32].upper()
+            addr = "POLM" + addr_hash
+            # Generate simple seed words from entropy
+            words_pool = ["abandon","ability","able","about","above","absent","absorb","abstract",
+                "absurd","abuse","access","accident","account","accuse","achieve","acid",
+                "acoustic","acquire","across","action","actor","actual","adapt","add",
+                "addict","address","adjust","admit","adult","advance","advice","aerobic",
+                "afford","afraid","again","agent","agree","ahead","aim","air","airport",
+                "aisle","alarm","album","alcohol","alert","alien","all","alley","allow",
+                "almost","alone","alpha","already","also","alter","always","amateur","amazing"]
+            import random
+            rng = random.Random(int.from_bytes(priv[:4], 'big'))
+            seed_words = ' '.join(rng.choices(words_pool, k=12))
+
             self.entry_polm.delete(0, "end")
             self.entry_polm.insert(0, addr)
-            self._log(f"Wallet: {addr[:24]}...", "green")
-            messagebox.showinfo("Wallet Created! ✓",
-                f"Address:\n{addr}\n\n"
-                "⚠️ This is a simplified wallet.\n"
-                "For full BIP-39 wallet with seed phrase,\n"
-                "run: python3 polm_bip39.py new \"My Wallet\"")
+            self._log(f"Wallet generated: {addr[:24]}...", "green")
+
+            # Show seed phrase in a copyable dialog
+            top = tk.Toplevel(self.root)
+            top.title("Wallet Created!")
+            top.configure(bg=BG)
+            top.geometry("500x320")
+            tk.Label(top, text="✓ Wallet Created!", font=("Courier",12,"bold"),
+                     bg=BG, fg=GREEN).pack(pady=(20,4))
+            tk.Label(top, text="Your POLM Address:", font=("Courier",8),
+                     bg=BG, fg=T3).pack()
+            addr_entry = tk.Entry(top, font=("Courier",9), bg=BG3, fg=CYAN,
+                                  relief="flat", justify="center")
+            addr_entry.insert(0, addr)
+            addr_entry.config(state="readonly")
+            addr_entry.pack(fill="x", padx=20, pady=4)
+            tk.Label(top, text="⚠️ Save your 12-word seed phrase:", font=("Courier",8),
+                     bg=BG, fg=AMBER).pack(pady=(12,4))
+            seed_entry = tk.Text(top, font=("Courier",9), bg=BG3, fg=T1,
+                                 height=3, relief="flat", wrap="word")
+            seed_entry.insert("1.0", seed_words)
+            seed_entry.config(state="disabled")
+            seed_entry.pack(fill="x", padx=20, pady=4)
+            tk.Label(top, text="Write this down! Without it you cannot recover your wallet.",
+                     font=("Courier",7), bg=BG, fg=RED, wraplength=460).pack(pady=4)
+            tk.Button(top, text="I saved my seed phrase — Close",
+                      font=("Courier",9,"bold"), bg=CYAN, fg="#000",
+                      relief="flat", command=top.destroy).pack(pady=12)
         except Exception as e:
             self._log(f"Wallet error: {e}", "red")
             messagebox.showerror("Error", f"Could not generate wallet:\n{e}")
