@@ -203,14 +203,8 @@ class PoLMMinerGUI:
         self.ram_type  = detect_ram_hardware()
         self._suspicious_count = 0
 
-        # Integrity check
-        if not check_integrity():
-            messagebox.showwarning(
-                "Integrity Warning",
-                "polm.py may have been modified.\n"
-                "Download the official version from:\n"
-                "github.com/proof-of-legacy/Proof-of-Legacy-Memory"
-            )
+        # Integrity check disabled for bundled EXE
+        # check_integrity() causes false positives with PyInstaller
 
         self._build_ui()
         self._start_status_loop()
