@@ -495,27 +495,40 @@ class Block:
 # ─────────────────────────────────────────────────────────────────
 def detect_cpu() -> str:
     """Detect CPU model name for miner identification."""
+    import platform
     try:
-        import platform
-        cpu = platform.processor()
-        if cpu:
-            # Shorten long CPU names
-            cpu = cpu.replace("(R)", "").replace("(TM)", "").strip()
-            # Keep only first 40 chars
-            return cpu[:40]
-    except Exception:
-        pass
-    try:
+        # Linux: read from /proc/cpuinfo
         if platform.system() == "Linux":
             with open("/proc/cpuinfo") as f:
                 for line in f:
                     if "model name" in line:
                         cpu = line.split(":")[1].strip()
-                        cpu = cpu.replace("(R)", "").replace("(TM)", "").strip()
+                        cpu = cpu.replace("(R)","").replace("(TM)","").strip()
                         return cpu[:40]
+        # Windows: read from registry
+        if platform.system() == "Windows":
+            import subprocess
+            out = subprocess.check_output(
+                ["wmic","cpu","get","name"],
+                capture_output=True, text=True, timeout=3
+            ).stdout
+            for line in out.splitlines():
+                line = line.strip()
+                if line and line != "Name":
+                    cpu = line.replace("(R)","").replace("(TM)","").strip()
+                    return cpu[:40]
+        # macOS
+        if platform.system() == "Darwin":
+            import subprocess
+            out = subprocess.check_output(
+                ["sysctl","-n","machdep.cpu.brand_string"],
+                capture_output=True, text=True, timeout=3
+            ).stdout.strip()
+            if out:
+                return out.replace("(R)","").replace("(TM)","").strip()[:40]
     except Exception:
         pass
-    return platform.machine() or "Unknown CPU"
+    return "Unknown CPU"
 
 def dynamic_boost(lat_ns: float, ram_type: str = "DDR4", height: int = 0) -> float:
     """Pure latency — no boost. score = 1/latency_ns."""
