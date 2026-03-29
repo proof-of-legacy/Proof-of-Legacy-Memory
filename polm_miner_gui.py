@@ -675,8 +675,7 @@ def main():
             if existing.strip().isdigit():
                 import ctypes
                 ctypes.windll.user32.MessageBoxW(0,
-                    "PoLM Miner is already running!
-Check your taskbar.",
+                    "PoLM Miner is already running!\nCheck your taskbar.",
                     "Already Running", 0x30)
                 sys.exit(0)
         except Exception:
