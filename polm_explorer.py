@@ -578,6 +578,7 @@ async function loadMiners(){
       <div class="minfo">
         <div class="maddr">${id.slice(0,24)}…</div>
         <div class="mmeta">${ram(v.ram)}<span style="color:var(--t3)">${(v.avg_latency||0).toFixed(0)}ns avg</span><span style="color:${col}">${(v.reward||0).toFixed(0)} POLM earned</span></div>
+        ${v.cpu ? `<div style="font-family:var(--mono);font-size:.68rem;color:var(--t3);margin-top:2px">⚙ ${v.cpu}</div>` : ''}
       </div>
       <div><div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(pct,100).toFixed(1)}%;background:${col}"></div></div><div class="num mc" style="font-size:.6rem;margin-top:1px">${pct.toFixed(1)}%</div></div>
       <div class="num cc">${v.blocks}</div>

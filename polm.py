@@ -463,6 +463,7 @@ class Block:
     mem_proof:  str
     score:      float
     reward:     float
+    cpu_name:   str = ""
     tx_ids:     List[str] = field(default_factory=list)
     block_hash: str = ""
 
@@ -492,6 +493,30 @@ class Block:
 # ─────────────────────────────────────────────────────────────────
 # PROOF-OF-LEGACY-MEMORY ALGORITHM
 # ─────────────────────────────────────────────────────────────────
+def detect_cpu() -> str:
+    """Detect CPU model name for miner identification."""
+    try:
+        import platform
+        cpu = platform.processor()
+        if cpu:
+            # Shorten long CPU names
+            cpu = cpu.replace("(R)", "").replace("(TM)", "").strip()
+            # Keep only first 40 chars
+            return cpu[:40]
+    except Exception:
+        pass
+    try:
+        if platform.system() == "Linux":
+            with open("/proc/cpuinfo") as f:
+                for line in f:
+                    if "model name" in line:
+                        cpu = line.split(":")[1].strip()
+                        cpu = cpu.replace("(R)", "").replace("(TM)", "").strip()
+                        return cpu[:40]
+    except Exception:
+        pass
+    return platform.machine() or "Unknown CPU"
+
 def dynamic_boost(lat_ns: float, ram_type: str = "DDR4", height: int = 0) -> float:
     """Pure latency — no boost. score = 1/latency_ns."""
     return 1.0
@@ -1049,12 +1074,15 @@ class PoLMNode:
                 if m not in stats:
                     stats[m] = {
                         "blocks": 0, "reward": 0.0, "ram": b.ram_type,
+                        "cpu": getattr(b, "cpu_name", ""),
                         "_lat": [], "_sc": [],
                     }
                 stats[m]["blocks"] += 1
                 stats[m]["reward"] += b.reward
                 stats[m]["_lat"].append(b.latency_ns)
                 stats[m]["_sc"].append(b.score)
+                if getattr(b, "cpu_name", ""):
+                    stats[m]["cpu"] = b.cpu_name
             for m in stats:
                 l = stats[m].pop("_lat")
                 s = stats[m].pop("_sc")
@@ -1314,6 +1342,7 @@ class PoLMMiner:
                     difficulty=diff, latency_ns=round(lat, 4),
                     mem_proof=walk_h.hex(), score=round(sc, 8),
                     reward=reward,
+                    cpu_name=detect_cpu(),
                     tx_ids=[t.tx_id for t in pending],
                 )
                 b.block_hash = b.compute_hash()
