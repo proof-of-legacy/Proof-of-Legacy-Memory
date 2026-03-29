@@ -105,7 +105,7 @@ def detect_ram_hardware() -> str:
                     avg = sum(speeds) / len(speeds)
                     if avg >= 4800: return "DDR5"
                     if avg >= 2133: return "DDR4"
-                    if avg >=  800: return "DDR3"
+                    if avg >=  400: return "DDR3"
                     return "DDR2"
             except Exception:
                 pass
@@ -661,6 +661,31 @@ class PoLMMinerGUI:
 
 # ── Entry ──────────────────────────────────────────────────────
 def main():
+    # Prevent multiple instances
+    import tempfile, sys
+    lock_file = os.path.join(tempfile.gettempdir(), "polm_miner.lock")
+    try:
+        import msvcrt
+        lock = open(lock_file, 'w')
+        msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
+    except Exception:
+        try:
+            # Already running
+            existing = open(lock_file).read()
+            if existing.strip().isdigit():
+                import ctypes
+                ctypes.windll.user32.MessageBoxW(0,
+                    "PoLM Miner is already running!
+Check your taskbar.",
+                    "Already Running", 0x30)
+                sys.exit(0)
+        except Exception:
+            pass
+        try:
+            open(lock_file, 'w').write(str(os.getpid()))
+        except Exception:
+            pass
+
     root = tk.Tk()
     style = ttk.Style()
     style.theme_use("clam")
