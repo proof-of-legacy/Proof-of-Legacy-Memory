@@ -669,27 +669,7 @@ class PoLMMinerGUI:
 
 # ── Entry ──────────────────────────────────────────────────────
 def main():
-    # Prevent multiple instances — check by process name
-    import tempfile
-    try:
-        import psutil
-        current_pid = os.getpid()
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            try:
-                if proc.pid == current_pid:
-                    continue
-                cmdline = ' '.join(proc.info.get('cmdline') or [])
-                name = proc.info.get('name','')
-                if 'PoLM-Miner' in name or 'polm_miner_gui' in cmdline:
-                    import ctypes
-                    ctypes.windll.user32.MessageBoxW(0,
-                        "PoLM Miner is already running!\nCheck your taskbar.",
-                        "Already Running", 0x30)
-                    sys.exit(0)
-            except Exception:
-                pass
-    except ImportError:
-        pass
+    pass  # Single instance check removed — open normally
 
     root = tk.Tk()
     style = ttk.Style()
