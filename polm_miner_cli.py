@@ -152,7 +152,11 @@ while True:
 
         if new_ph != prev_hash:
             prev_hash = new_ph
-            dag = build_dag(bytes.fromhex(prev_hash[:64].ljust(64,"0")))
+            # Only rebuild DAG if epoch changed (not every block!)
+            new_epoch = int(work.get("epoch", 0))
+            if new_epoch != epoch or dag is None:
+                dag = build_dag(bytes.fromhex(prev_hash[:64].ljust(64,"0")))
+            epoch = new_epoch
 
         nonce = 0
         while True:
