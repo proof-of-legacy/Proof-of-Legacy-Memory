@@ -427,22 +427,23 @@ footer{border-top:1px solid var(--border);padding:40px 0;background:var(--bg2)}
       <div class="qs-card">
         <div class="qs-header">
           <div class="qs-icon">🪟</div>
-          <div><div class="qs-title">Windows EXE</div><div style="font-family:var(--mono);font-size:.72rem;color:var(--t2)">No Python required</div></div>
+          <div><div class="qs-title">Windows (PowerShell)</div><div style="font-family:var(--mono);font-size:.72rem;color:var(--t2)">No antivirus issues</div></div>
           <span class="qs-badge badge-easy">⭐ EASIEST</span>
         </div>
         <div class="qs-body">
           <ul class="qs-steps">
-            <li data-n="1">Download <strong style="color:var(--t1)">PoLM-Miner.exe</strong> from GitHub Releases</li>
-            <li data-n="2">Double-click to open — no installation needed</li>
-            <li data-n="3">Generate or enter your POLM wallet address</li>
+            <li data-n="1">Install <strong style="color:var(--t1)">Python 3.11</strong> from python.org — check "Add Python to PATH"</li>
+            <li data-n="2">Open <strong style="color:var(--t1)">PowerShell</strong> and run the commands below</li>
+            <li data-n="3">Choose to generate a new wallet or enter existing</li>
             <li data-n="4">Enter your Polygon/Trust wallet (to claim rewards)</li>
-            <li data-n="5">Click <strong style="color:var(--cyan)">START MINING</strong> ⛏</li>
+            <li data-n="5">Mining starts automatically ⛏</li>
           </ul>
-          <div style="font-family:var(--mono);font-size:.68rem;color:var(--t3);margin-bottom:16px;line-height:1.6">
-            🔒 Verify SHA256: <code style="color:var(--cyan)">Get-FileHash PoLM-Miner.exe -Algorithm SHA256</code><br>
-            Compare output with <code style="color:var(--cyan)">PoLM-Miner.exe.sha256</code> — if different, do not run.
-          </div>
-          <a href="https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/latest" target="_blank" class="btn btn-primary" style="width:100%;justify-content:center">⬇ Download PoLM-Miner.exe</a>
+          <pre><span class="cmt"># Download miner</span>
+<span class="cmd">mkdir</span> $env:USERPROFILE\polm
+<span class="cmd">Invoke-WebRequest</span> -Uri "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py" -OutFile "$env:USERPROFILE\polm\miner.py"
+
+<span class="cmt"># Run</span>
+<span class="cmd">python</span> $env:USERPROFILE\polm\miner.py</pre>
         </div>
       </div>
       <div class="qs-card">
@@ -517,7 +518,7 @@ footer{border-top:1px solid var(--border);padding:40px 0;background:var(--bg2)}
       <a href="https://x.com/polm2026" target="_blank" class="comm-card"><div class="comm-icon">𝕏</div><div class="comm-name">@polm2026</div><div class="comm-desc">Project updates</div></a>
       <a href="https://x.com/aluisiofer" target="_blank" class="comm-card"><div class="comm-icon">👤</div><div class="comm-name">@aluisiofer</div><div class="comm-desc">Founder</div></a>
       <a href="https://github.com/proof-of-legacy/Proof-of-Legacy-Memory" target="_blank" class="comm-card"><div class="comm-icon">⚙️</div><div class="comm-name">GitHub</div><div class="comm-desc">Open source · MIT</div></a>
-      <a href="https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/latest" target="_blank" class="comm-card"><div class="comm-icon">⬇️</div><div class="comm-name">Download EXE</div><div class="comm-desc">Windows miner</div></a>
+      <a href="https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py" target="_blank" class="comm-card"><div class="comm-icon">⬇️</div><div class="comm-name">CLI Miner</div><div class="comm-desc">Windows &amp; Linux</div></a>
       <a href="/claim" class="comm-card"><div class="comm-icon">💰</div><div class="comm-name">Claim POLM</div><div class="comm-desc">polm.com.br/claim</div></a>
       <a href="/roadmap" class="comm-card"><div class="comm-icon">🗺</div><div class="comm-name">Roadmap</div><div class="comm-desc">polm.com.br/roadmap</div></a>
     </div>
