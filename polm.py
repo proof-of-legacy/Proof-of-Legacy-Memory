@@ -464,6 +464,7 @@ class Block:
     score:      float
     reward:     float
     cpu_name:   str = ""
+    os_name:    str = ""
     tx_ids:     List[str] = field(default_factory=list)
     block_hash: str = ""
 
@@ -1080,6 +1081,7 @@ class PoLMNode:
                     stats[m] = {
                         "blocks": 0, "reward": 0.0, "ram": b.ram_type,
                         "cpu": getattr(b, "cpu_name", ""),
+                        "os": getattr(b, "os_name", ""),
                         "_lat": [], "_sc": [],
                     }
                 stats[m]["blocks"] += 1
@@ -1088,6 +1090,8 @@ class PoLMNode:
                 stats[m]["_sc"].append(b.score)
                 if getattr(b, "cpu_name", ""):
                     stats[m]["cpu"] = b.cpu_name
+                if getattr(b, "os_name", ""):
+                    stats[m]["os"] = b.os_name
             for m in stats:
                 l = stats[m].pop("_lat")
                 s = stats[m].pop("_sc")
