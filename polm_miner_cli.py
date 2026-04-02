@@ -35,6 +35,28 @@ def detect_ram():
         pass
     return "DDR4"
 
+def detect_os():
+    import platform
+    try:
+        s = platform.system()
+        if s == "Windows":
+            v = platform.version()
+            r = platform.release()
+            return f"Windows {r} ({v[:10]})"
+        elif s == "Linux":
+            try:
+                for line in open("/etc/os-release"):
+                    if line.startswith("PRETTY_NAME="):
+                        return line.split("=")[1].strip().strip('"')[:40]
+            except:
+                pass
+            return f"Linux {platform.release()[:20]}"
+        elif s == "Darwin":
+            return f"macOS {platform.mac_ver()[0]}"
+        return s
+    except:
+        return "unknown"
+
 def detect_cpu():
     import platform, subprocess
     try:
@@ -122,6 +144,7 @@ def generate_wallet():
 
 RAM_TYPE = detect_ram()
 CPU_NAME = detect_cpu()
+OS_NAME  = detect_os()
 
 print("=" * 52)
 print("  PoLM Miner CLI v1.4 — score = 1/latency_ns")
@@ -183,6 +206,7 @@ print(f"  Polygon: {evm_addr}")
 print(f"  Node:    {NODE_URL}")
 print(f"  RAM:     {RAM_TYPE}")
 print(f"  CPU:     {CPU_NAME or 'unknown'}")
+print(f"  OS:      {OS_NAME}")
 print()
 
 work = get_work()
