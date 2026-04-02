@@ -6,31 +6,66 @@ def detect_ram():
     import platform, subprocess
     try:
         if platform.system() == "Windows":
-            out = subprocess.check_output(
-                ["wmic","memorychip","get","SMBIOSMemoryType,Speed"],
-                capture_output=True, text=True, timeout=5,
-                creationflags=0x08000000
-            ).stdout
-            if "34" in out: return "DDR5"
-            if "26" in out: return "DDR4"
-            if "24" in out: return "DDR3"
-            if "21" in out: return "DDR2"
-            # fallback by speed
-            speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
-            if speeds:
-                avg = sum(speeds)/len(speeds)
-                if avg >= 4800: return "DDR5"
-                if avg >= 2133: return "DDR4"
-                return "DDR3"
+            # Method 1: SMBIOSMemoryType
+            try:
+                out = subprocess.check_output(
+                    ["wmic","memorychip","get","SMBIOSMemoryType,Speed"],
+                    capture_output=True, text=True, timeout=5,
+                    creationflags=0x08000000
+                ).stdout
+                lines = [l.strip() for l in out.splitlines() if l.strip() and not l.startswith('S')]
+                for line in lines:
+                    parts = line.split()
+                    for p in parts:
+                        if p.isdigit():
+                            v = int(p)
+                            if v == 34: return "DDR5"
+                            if v in [26,27,28,29,30]: return "DDR4"
+                            if v in [24,25]: return "DDR3"
+                            if v in [21,22]: return "DDR2"
+            except Exception:
+                pass
+            # Method 2: Speed only
+            try:
+                out = subprocess.check_output(
+                    ["wmic","memorychip","get","Speed"],
+                    capture_output=True, text=True, timeout=5,
+                    creationflags=0x08000000
+                ).stdout
+                speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
+                if speeds:
+                    avg = sum(speeds)/len(speeds)
+                    if avg >= 4800: return "DDR5"
+                    if avg >= 2133: return "DDR4"
+                    if avg >= 800:  return "DDR3"
+                    return "DDR2"
+            except Exception:
+                pass
         elif platform.system() == "Linux":
-            out = subprocess.check_output(
-                ["sudo","dmidecode","-t","memory"],
-                capture_output=True, text=True, timeout=5
-            ).stdout
-            for line in out.splitlines():
-                if "Type:" in line and "DDR" in line:
-                    for t in ["DDR5","DDR4","DDR3","DDR2"]:
-                        if t in line: return t
+            try:
+                out = subprocess.check_output(
+                    ["sudo","dmidecode","-t","memory"],
+                    capture_output=True, text=True, timeout=5
+                ).stdout
+                for line in out.splitlines():
+                    if "Type:" in line and "DDR" in line:
+                        for t in ["DDR5","DDR4","DDR3","DDR2"]:
+                            if t in line: return t
+            except Exception:
+                pass
+            # Linux fallback: /sys
+            try:
+                import glob
+                for path in glob.glob("/sys/bus/i2c/drivers/ee1004/*/eeprom"):
+                    data = open(path,"rb").read()
+                    if len(data) > 2:
+                        t = data[2]
+                        if t == 0x1e: return "DDR5"
+                        if t == 0x0c: return "DDR4"
+                        if t == 0x0b: return "DDR3"
+                        if t == 0x08: return "DDR2"
+            except Exception:
+                pass
     except Exception:
         pass
     return "DDR4"
@@ -61,21 +96,56 @@ def detect_cpu():
     import platform, subprocess
     try:
         if platform.system() == "Windows":
-            out = subprocess.check_output(
-                ["wmic","cpu","get","name"],
-                capture_output=True, text=True, timeout=5,
-                creationflags=0x08000000
-            ).stdout
-            lines = [l.strip() for l in out.splitlines() if l.strip() and l.strip() != "Name"]
-            if lines: return lines[0][:40]
+            # Try registry first
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                    r"HARDWARE\DESCRIPTION\System\CentralProcessor\0")
+                name = winreg.QueryValueEx(key, "ProcessorNameString")[0].strip()
+                if name: return name[:40]
+            except Exception:
+                pass
+            # Fallback WMIC
+            try:
+                out = subprocess.check_output(
+                    ["wmic","cpu","get","name"],
+                    capture_output=True, text=True, timeout=5,
+                    creationflags=0x08000000
+                ).stdout
+                lines = [l.strip() for l in out.splitlines() if l.strip() and l.strip() != "Name"]
+                if lines: return lines[0][:40]
+            except Exception:
+                pass
         elif platform.system() == "Linux":
             with open("/proc/cpuinfo") as f:
                 for line in f:
                     if "model name" in line:
                         return line.split(":")[1].strip()[:40]
+        elif platform.system() == "Darwin":
+            out = subprocess.check_output(
+                ["sysctl","-n","machdep.cpu.brand_string"],
+                capture_output=True, text=True, timeout=5
+            ).stdout.strip()
+            if out: return out[:40]
     except Exception:
         pass
     return ""
+
+def detect_ram_speed():
+    """Get RAM speed in MHz to determine DDR type"""
+    import platform, subprocess
+    try:
+        if platform.system() == "Windows":
+            out = subprocess.check_output(
+                ["wmic","memorychip","get","Speed"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=0x08000000
+            ).stdout
+            speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
+            if speeds: return sum(speeds)//len(speeds)
+    except:
+        pass
+    return 0
 
 def measure_latency(buf, steps=5000):
     size = len(buf); idx = 0
