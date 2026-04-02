@@ -54,15 +54,17 @@ Most Proof-of-Work algorithms reward whoever has the most powerful hardware. PoL
 
 ## Quick Start
 
-### 🪟 Windows EXE — easiest, no Python needed!
+### 🪟 Windows (PowerShell) — no antivirus issues!
+````powershell
+# 1. Install Python 3.11 from python.org — check "Add Python to PATH"
 
-1. Download **[PoLM-Miner.exe](https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/latest)**
-2. Double-click to open
-3. Enter your POLM wallet address
-4. Enter your Polygon/Trust wallet
-5. Click **START MINING** ⛏
+# 2. Download miner
+mkdir $env:USERPROFILE\polm
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py" -OutFile "$env:USERPROFILE\polm\miner.py"
 
-> Verify SHA256: `Get-FileHash PoLM-Miner.exe -Algorithm SHA256` and compare with `PoLM-Miner.exe.sha256`
+# 3. Run
+python $env:USERPROFILE\polm\miner.py
+```
 
 ### 🪟 Windows (PowerShell)
 
