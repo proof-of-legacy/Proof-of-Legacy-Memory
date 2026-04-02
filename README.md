@@ -26,8 +26,8 @@ Score = 1/latency. Physics can't be faked.
 
 ### 🪟 Windows — PowerShell
 ```powershell
-# Step 1: Install Python 3.11 from https://python.org
-#         ✅ Check "Add Python to PATH" during installation
+# Step 1: Install Python 3.11
+winget install Python.Python.3.11
 
 # Step 2: Download the miner
 mkdir $env:USERPROFILE\polm
@@ -39,12 +39,13 @@ python $env:USERPROFILE\polm\miner.py
 
 ### 🐧 Linux / macOS — Terminal
 ```bash
-# Download and run directly — no install needed
+# Download and run
 curl -O https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py
 python3 polm_miner_cli.py
 ```
 
 > The miner will guide you through wallet creation and setup on first run.
+> On first run: generates wallet, shows 12-word seed phrase, registers Polygon wallet automatically.
 
 ---
 
