@@ -961,14 +961,6 @@ class PoLMNode:
                 txs     = [Transaction.from_dict(t) for t in d.get("txs", [])]
                 miner_ip = request.remote_addr or "unknown"
 
-                # ── 1 miner per IP enforcement ──────────────────
-                existing = self.chain._miner_ips.get(miner_ip)
-                if existing and existing != b.miner_id and b.miner_id != FOUNDER_ADDRESS:
-                    # IP already registered to a different miner
-                    return jsonify({
-                        "accepted": False,
-                        "reason": f"IP {miner_ip} already registered to another miner. 1 miner per machine.",
-                    })
 
                 ok, reason = self.chain.add_block(b, txs)
                 if ok:
