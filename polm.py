@@ -702,6 +702,16 @@ class Blockchain:
                 return False, "hash mismatch"
             if b.latency_ns < 5:
                 return False, "latency too low (cache exploit)"
+            # Validate latency is physically plausible for reported RAM type
+            MIN_LATENCY = {
+                "DDR2": 50.0,
+                "DDR3": 50.0,
+                "DDR4": 50.0,
+                "DDR5": 50.0,
+            }
+            min_lat = MIN_LATENCY.get(b.ram_type, 50.0)
+            if b.latency_ns < min_lat:
+                return False, f"latency {b.latency_ns:.1f}ns too low for {b.ram_type} (min {min_lat}ns)"
             if abs(b.reward - block_reward(b.height)) > 1e-6:
                 return False, "wrong reward"
             if b.timestamp > int(time.time()) + 120:
