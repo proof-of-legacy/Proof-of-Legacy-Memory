@@ -165,11 +165,19 @@ def build_dag(seed, size_mb=256):
         chunk = hashlib.sha3_256(chunk).digest(); buf[i:i+32] = chunk
     print(" done"); return buf
 
-def mem_walk(buf, nonce, steps=100000):
-    size = len(buf); idx = nonce % size
+def memory_walk(buf, prev_hash, address, nonce, steps=100000):
+    """Exact same algorithm as polm.py — sha3 each step, measures real latency"""
+    size = len(buf)
+    seed = hashlib.sha3_256(f"{prev_hash}:{address}:{nonce}".encode()).digest()
+    h    = seed
+    pos  = int.from_bytes(h[:8], "little") % size
+    t0   = time.perf_counter_ns()
     for _ in range(steps):
-        idx = struct.unpack_from('<I', buf, idx % (size-4))[0] % size
-    return idx
+        mem = bytes(buf[pos:pos+32]) if pos+32 <= size else bytes(buf[pos:]) + bytes(buf[:32-(size-pos)])
+        h   = hashlib.sha3_256(h + mem).digest()
+        pos = int.from_bytes(h[:8], "little") % size
+    avg_lat = (time.perf_counter_ns() - t0) / steps
+    return h, avg_lat
 
 def get_work():
     with urllib.request.urlopen(f"{NODE_URL}/getwork", timeout=10) as r:
@@ -315,11 +323,11 @@ while True:
 
         nonce = 0
         while True:
-            proof_idx = mem_walk(dag, nonce)
-            mem_proof = hashlib.sha3_256(
-                struct.pack("<Q", proof_idx) + prev_hash.encode()
-            ).hexdigest()
-            lat   = measure_latency(dag)
+            walk_h, lat = memory_walk(dag, prev_hash, polm_addr, nonce)
+            if lat < 5:
+                nonce += 1
+                continue
+            mem_proof = walk_h.hex()
             score = 1.0 / lat if lat > 0 else 0
             ts    = int(time.time())
             header = (f"{height}|{prev_hash}|{ts}|{nonce}|{polm_addr}|"
