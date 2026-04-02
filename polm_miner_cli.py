@@ -167,7 +167,7 @@ while True:
             lat   = measure_latency(dag)
             score = 1.0 / lat if lat > 0 else 0
             ts    = int(time.time())
-            header = (f"{height+1}|{prev_hash}|{ts}|{nonce}|{polm_addr}|"
+            header = (f"{height}|{prev_hash}|{ts}|{nonce}|{polm_addr}|"
                       f"DDR4|1|{epoch}|{diff}|{lat:.4f}|{mem_proof}|"
                       f"{score:.8f}|{reward}|")
             block_hash = hashlib.sha3_256(header.encode()).hexdigest()
@@ -175,7 +175,7 @@ while True:
             if block_hash.startswith("0" * diff):
                 print(f"\n  Block found! nonce={nonce} hash={block_hash[:16]}...")
                 bd = {
-                    "height": height+1, "prev_hash": prev_hash,
+                    "height": height, "prev_hash": prev_hash,
                     "timestamp": ts, "nonce": nonce, "miner_id": polm_addr,
                     "ram_type": "DDR4", "threads": 1, "epoch": epoch,
                     "difficulty": diff, "latency_ns": lat, "mem_proof": mem_proof,
