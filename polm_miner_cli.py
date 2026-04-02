@@ -2,6 +2,59 @@ import hashlib, time, json, struct, urllib.request, secrets, random, os
 
 NODE_URL = "https://polm.com.br/api"
 
+def detect_ram():
+    import platform, subprocess
+    try:
+        if platform.system() == "Windows":
+            out = subprocess.check_output(
+                ["wmic","memorychip","get","SMBIOSMemoryType,Speed"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=0x08000000
+            ).stdout
+            if "34" in out: return "DDR5"
+            if "26" in out: return "DDR4"
+            if "24" in out: return "DDR3"
+            if "21" in out: return "DDR2"
+            # fallback by speed
+            speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
+            if speeds:
+                avg = sum(speeds)/len(speeds)
+                if avg >= 4800: return "DDR5"
+                if avg >= 2133: return "DDR4"
+                return "DDR3"
+        elif platform.system() == "Linux":
+            out = subprocess.check_output(
+                ["sudo","dmidecode","-t","memory"],
+                capture_output=True, text=True, timeout=5
+            ).stdout
+            for line in out.splitlines():
+                if "Type:" in line and "DDR" in line:
+                    for t in ["DDR5","DDR4","DDR3","DDR2"]:
+                        if t in line: return t
+    except Exception:
+        pass
+    return "DDR4"
+
+def detect_cpu():
+    import platform, subprocess
+    try:
+        if platform.system() == "Windows":
+            out = subprocess.check_output(
+                ["wmic","cpu","get","name"],
+                capture_output=True, text=True, timeout=5,
+                creationflags=0x08000000
+            ).stdout
+            lines = [l.strip() for l in out.splitlines() if l.strip() and l.strip() != "Name"]
+            if lines: return lines[0][:40]
+        elif platform.system() == "Linux":
+            with open("/proc/cpuinfo") as f:
+                for line in f:
+                    if "model name" in line:
+                        return line.split(":")[1].strip()[:40]
+    except Exception:
+        pass
+    return ""
+
 def measure_latency(buf, steps=5000):
     size = len(buf); idx = 0
     t0 = time.perf_counter_ns()
@@ -17,7 +70,7 @@ def build_dag(seed, size_mb=256):
         chunk = hashlib.sha3_256(chunk).digest(); buf[i:i+32] = chunk
     print(" done"); return buf
 
-def mem_walk(buf, nonce, steps=1000):
+def mem_walk(buf, nonce, steps=100000):
     size = len(buf); idx = nonce % size
     for _ in range(steps):
         idx = struct.unpack_from('<I', buf, idx % (size-4))[0] % size
@@ -66,6 +119,9 @@ def generate_wallet():
              "alter","always","amazing","amber","angry","animal","answer","army","around","art"]
     rng = random.Random(int.from_bytes(priv[:4], "big"))
     return addr, " ".join(rng.choices(words, k=12))
+
+RAM_TYPE = detect_ram()
+CPU_NAME = detect_cpu()
 
 print("=" * 52)
 print("  PoLM Miner CLI v1.4 — score = 1/latency_ns")
@@ -125,6 +181,8 @@ print()
 print(f"  POLM:    {polm_addr}")
 print(f"  Polygon: {evm_addr}")
 print(f"  Node:    {NODE_URL}")
+print(f"  RAM:     {RAM_TYPE}")
+print(f"  CPU:     {CPU_NAME or 'unknown'}")
 print()
 
 work = get_work()
@@ -168,7 +226,7 @@ while True:
             score = 1.0 / lat if lat > 0 else 0
             ts    = int(time.time())
             header = (f"{height}|{prev_hash}|{ts}|{nonce}|{polm_addr}|"
-                      f"DDR4|1|{epoch}|{diff}|{lat:.4f}|{mem_proof}|"
+                      f"{RAM_TYPE}|1|{epoch}|{diff}|{lat:.4f}|{mem_proof}|"
                       f"{score:.8f}|{reward}|")
             block_hash = hashlib.sha3_256(header.encode()).hexdigest()
 
