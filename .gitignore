@@ -46,3 +46,7 @@ polm_peers.json
 polm_wallet*.json
 *.json
 !package.json
+backup-final/
+nohup.out
+*.bak
+0
