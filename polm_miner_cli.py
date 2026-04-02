@@ -332,9 +332,9 @@ while True:
                 bd = {
                     "height": height, "prev_hash": prev_hash,
                     "timestamp": ts, "nonce": nonce, "miner_id": polm_addr,
-                    "ram_type": "DDR4", "threads": 1, "epoch": epoch,
+                    "ram_type": RAM_TYPE, "threads": 1, "epoch": epoch,
                     "difficulty": diff, "latency_ns": lat, "mem_proof": mem_proof,
-                    "score": score, "reward": reward, "cpu_name": "",
+                    "score": score, "reward": reward, "cpu_name": CPU_NAME, "os_name": OS_NAME,
                     "tx_ids": [], "block_hash": block_hash
                 }
                 try:
