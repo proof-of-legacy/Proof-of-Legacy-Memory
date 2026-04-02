@@ -13,16 +13,19 @@ def detect_ram():
                     capture_output=True, text=True, timeout=5,
                     creationflags=0x08000000
                 ).stdout
-                lines = [l.strip() for l in out.splitlines() if l.strip() and not l.startswith('S')]
+                # Parse line by line — first column is SMBIOSMemoryType
+                lines = [l.strip() for l in out.splitlines() if l.strip() and not l.strip().startswith("S")]
                 for line in lines:
                     parts = line.split()
-                    for p in parts:
-                        if p.isdigit():
-                            v = int(p)
-                            if v == 34: return "DDR5"
-                            if v in [26,27,28,29,30]: return "DDR4"
-                            if v in [24,25]: return "DDR3"
-                            if v in [21,22]: return "DDR2"
+                    if parts:
+                        try:
+                            smbios = int(parts[0])
+                            if smbios == 34: return "DDR5"
+                            if smbios in [26,27,28,29,30]: return "DDR4"
+                            if smbios in [24,25]: return "DDR3"
+                            if smbios in [21,22]: return "DDR2"
+                        except ValueError:
+                            pass
             except Exception:
                 pass
             # Method 2: Speed only
