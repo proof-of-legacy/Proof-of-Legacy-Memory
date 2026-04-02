@@ -64,7 +64,7 @@ Most Proof-of-Work algorithms reward whoever has the most powerful hardware. PoL
 
 > Verify SHA256: `Get-FileHash PoLM-Miner.exe -Algorithm SHA256` and compare with `PoLM-Miner.exe.sha256`
 
-### 🪟 Windows (manual with Python)
+### 🪟 Windows (PowerShell)
 
 1. Install **Python 3.9+** from [python.org](https://www.python.org/downloads/) *(check "Add to PATH")*
 2. Download this repository as ZIP and extract

@@ -1,0 +1,35 @@
+server {
+    server_name wallet.polm.com.br;
+
+    # Remove restrictive security headers from upstream
+    proxy_hide_header Content-Security-Policy;
+    proxy_hide_header X-Content-Security-Policy;
+    add_header Content-Security-Policy "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:" always;
+
+    location / {
+        proxy_pass http://localhost:7070;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        add_header Content-Security-Policy "default-src * data: blob: filesystem: about: ws: wss: unsafe-inline unsafe-eval; script-src * unsafe-inline unsafe-eval";
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/wallet.polm.com.br/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/wallet.polm.com.br/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+server {
+    if ($host = wallet.polm.com.br) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name wallet.polm.com.br;
+    return 404; # managed by Certbot
+
+
+}
