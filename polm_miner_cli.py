@@ -16,7 +16,7 @@ except (IOError, OSError):
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.3"
+VERSION    = "1.5.4"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
@@ -278,7 +278,10 @@ settings = load_settings()
 if settings.get("polm_address"):
     print(f"  Saved POLM:    {settings['polm_address']}")
     print(f"  Saved Polygon: {settings.get('evm_address','')}")
-    use = input("  Use saved settings? (Y/n): ").strip().lower()
+    try:
+        use = input("  Use saved settings? (Y/n): ").strip().lower()
+    except EOFError:
+        use = "y"
     if use == "n":
         settings = {}
 
