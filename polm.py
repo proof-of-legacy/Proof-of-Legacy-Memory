@@ -494,6 +494,27 @@ class Block:
 # ─────────────────────────────────────────────────────────────────
 # PROOF-OF-LEGACY-MEMORY ALGORITHM
 # ─────────────────────────────────────────────────────────────────
+def detect_os() -> str:
+    """Detect OS for miner identification."""
+    import platform
+    try:
+        s = platform.system()
+        if s == "Windows":
+            return f"Windows {platform.release()} ({platform.version()[:10]})"
+        elif s == "Linux":
+            try:
+                for line in open("/etc/os-release"):
+                    if line.startswith("PRETTY_NAME="):
+                        return line.split("=")[1].strip().strip('"')[:40]
+            except:
+                pass
+            return f"Linux {platform.release()[:20]}"
+        elif s == "Darwin":
+            return f"macOS {platform.mac_ver()[0]}"
+        return s
+    except:
+        return ""
+
 def detect_cpu() -> str:
     """Detect CPU model name for miner identification."""
     import platform
@@ -1362,6 +1383,7 @@ class PoLMMiner:
                     mem_proof=walk_h.hex(), score=round(sc, 8),
                     reward=reward,
                     cpu_name=detect_cpu(),
+                    os_name=detect_os(),
                     tx_ids=[t.tx_id for t in pending],
                 )
                 b.block_hash = b.compute_hash()
