@@ -362,6 +362,14 @@ while True:
             block_hash = hashlib.sha3_256(header.encode()).hexdigest()
 
             if block_hash.startswith("0" * diff):
+                # Verify height is still current before submitting
+                try:
+                    current = json.loads(urllib.request.urlopen(f"{NODE_URL}/getwork", timeout=3).read())
+                    if int(current.get("height", height)) != height:
+                        print(f"\n  Block found but chain moved — discarding")
+                        break
+                except Exception:
+                    pass
                 print(f"\n  Block found! nonce={nonce} hash={block_hash[:16]}...")
                 bd = {
                     "height": height, "prev_hash": prev_hash,
