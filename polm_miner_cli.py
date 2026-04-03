@@ -1,8 +1,22 @@
-import hashlib, time, json, struct, urllib.request, secrets, random, os
+import hashlib, time, json, struct, urllib.request, secrets, random, os, sys
+
+# Single instance lock
+_LOCK_FILE = os.path.join(os.path.expanduser("~"), ".polm_miner.lock")
+try:
+    _lock_fd = open(_LOCK_FILE, "w")
+    if os.name == "nt":
+        import msvcrt
+        msvcrt.locking(_lock_fd.fileno(), msvcrt.LK_NBLCK, 1)
+    else:
+        import fcntl
+        fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except (IOError, OSError):
+    print("  [!] PoLM Miner is already running. Only one instance allowed.")
+    sys.exit(1)
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.2"
+VERSION    = "1.5.3"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
