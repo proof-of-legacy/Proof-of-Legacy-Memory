@@ -2,7 +2,7 @@ import hashlib, time, json, struct, urllib.request, secrets, random, os
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.0"
+VERSION    = "1.5.1"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
