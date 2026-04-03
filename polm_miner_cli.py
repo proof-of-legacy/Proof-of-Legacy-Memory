@@ -73,7 +73,7 @@ def detect_ram():
                 out = subprocess.check_output(
                     ["sudo","dmidecode","-t","memory"],
                     capture_output=True, text=True, timeout=5
-                ).stdout
+                )
                 for line in out.splitlines():
                     if "Type:" in line and "DDR" in line:
                         for t in ["DDR5","DDR4","DDR3","DDR2"]:
@@ -167,7 +167,7 @@ def detect_ram_speed():
                 ["wmic","memorychip","get","Speed"],
                 stderr=subprocess.PIPE, text=True, timeout=5,
                 creationflags=0x08000000
-            ).stdout
+            )
             speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
             if speeds: return sum(speeds)//len(speeds)
     except:
