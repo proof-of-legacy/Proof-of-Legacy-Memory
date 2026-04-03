@@ -1,6 +1,30 @@
 import hashlib, time, json, struct, urllib.request, secrets, random, os
 
-NODE_URL = "https://polm.com.br/api"
+NODE_URL   = "https://polm.com.br/api"
+MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
+VERSION    = "1.5.0"
+
+def check_update():
+    """Auto-update: checks GitHub for newer version and restarts if found"""
+    try:
+        import urllib.request, os, sys
+        r = urllib.request.urlopen(MINER_URL + "?nocache=" + str(int(time.time())), timeout=5)
+        new_code = r.read().decode()
+        # Check version in remote file
+        for line in new_code.splitlines():
+            if line.strip().startswith("VERSION"):
+                remote_ver = line.split("=")[1].strip().strip('"').strip("'")
+                if remote_ver != VERSION:
+                    print(f"  [Update] New version {remote_ver} found! Updating...")
+                    this_file = os.path.abspath(__file__)
+                    open(this_file, "w", encoding="utf-8").write(new_code)
+                    print(f"  [Update] Updated! Restarting...")
+                    os.execv(sys.executable, [sys.executable] + sys.argv)
+                else:
+                    print(f"  [OK] Version {VERSION} is up to date.")
+                return
+    except Exception as e:
+        print(f"  [Update] Could not check for updates: {e}")
 
 def detect_ram():
     import platform, subprocess
@@ -227,8 +251,10 @@ RAM_TYPE = detect_ram()
 CPU_NAME = detect_cpu()
 OS_NAME  = detect_os()
 
+check_update()
+
 print("=" * 52)
-print("  PoLM Miner CLI v1.4 — score = 1/latency_ns")
+print(f"  PoLM Miner CLI v{VERSION} — score = 1/latency_ns")
 print("  Any RAM mines. Physics can't be faked.")
 print("=" * 52)
 print()
