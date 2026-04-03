@@ -138,7 +138,7 @@ def detect_cpu():
                     ["wmic","cpu","get","name"],
                     stderr=subprocess.PIPE, text=True, timeout=5,
                     creationflags=0x08000000
-                ).stdout
+                )
                 lines = [l.strip() for l in out.splitlines() if l.strip() and l.strip() != "Name"]
                 if lines: return lines[0][:40]
             except Exception:
@@ -152,7 +152,7 @@ def detect_cpu():
             out = subprocess.check_output(
                 ["sysctl","-n","machdep.cpu.brand_string"],
                 capture_output=True, text=True, timeout=5
-            ).stdout.strip()
+            )
             if out: return out[:40]
     except Exception:
         pass
