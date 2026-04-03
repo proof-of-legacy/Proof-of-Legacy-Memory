@@ -1,5 +1,5 @@
 # PoLM — Proof of Legacy Memory
-## Technical Whitepaper v2.0 — Mainnet
+## Technical Whitepaper v2.1 — Mainnet
 
 <div align="center">
 
@@ -28,6 +28,8 @@ score = 1 / latency_ns
 
 No boost multiplier. No penalty. No artificial favoritism by RAM type. Every generation — DDR2, DDR3, DDR4, DDR5 — mines honestly based on its physical latency characteristics. Slower RAM scores higher per nonce; faster RAM compensates with higher nonce throughput. The network needs both.
 
+Mining rewards are bridged to Polygon as an ERC-20 token (`0x79175931C54c9765E5846229a0eB118ef24fdE55`), claimable at [polm.com.br/claim](https://polm.com.br/claim). An on-chain ECDSA oracle registers blocks automatically — no manual intervention required.
+
 ---
 
 ## 1. Project Information
@@ -39,11 +41,14 @@ No boost multiplier. No penalty. No artificial favoritism by RAM type. Every gen
 | Version | 2.0.0 |
 | Website | https://polm.com.br |
 | Explorer | https://explorer.polm.com.br |
+| Claim rewards | https://polm.com.br/claim |
 | Twitter | https://x.com/polm2026 |
 | Founder | Aluísio Fernandes — https://x.com/aluisiofer |
 | Repository | https://github.com/proof-of-legacy/Proof-of-Legacy-Memory |
 | License | MIT |
 | Status | Mainnet live |
+| ERC-20 Contract | `0x79175931C54c9765E5846229a0eB118ef24fdE55` (Polygon) |
+| Oracle wallet | `0xcD128d1112Bbb44D61f0557a375E512f14856c93` |
 
 ---
 
@@ -88,12 +93,13 @@ No boost multiplier. No penalty. No artificial favoritism by RAM type. Every gen
 │  polm.com.br/api/                            │
 └──────────────┬───────────────────────────────┘
                │
-        ┌──────┴──────┐
-        ▼             ▼
-  Relay Nodes    Mining Clients
-                      │
-    DDR2 ── DDR3 ── DDR4 ── DDR5
-             Any RAM mines
+        ┌──────┴──────────────┐
+        ▼                     ▼
+  Mining Clients         Polygon Oracle
+  (CLI / GUI)            (ECDSA bridge)
+        │                     │
+DDR2·DDR3·DDR4·DDR5     ERC-20 POLM token
+   Any RAM mines         polm.com.br/claim
 ```
 
 ---
@@ -114,14 +120,13 @@ No boost multiplier. No penalty. No artificial favoritism by RAM type. Every gen
 ### Memory Walk
 
 ```python
-h   = sha3_256(prev_hash + address + nonce)
-pos = int(h[:8], little_endian) % dag_size
+h   = sha3_256(f"{prev_hash}:{address}:{nonce}".encode())
+pos = int.from_bytes(h[:8], 'little') % dag_size
 
 for step in range(100_000):
     mem = DAG[pos : pos+32]           # random DRAM read
     h   = sha3_256(h + mem)           # hash chain
-    pos = int(h[:8], little_endian) % dag_size
-    record_latency(read_time_ns)
+    pos = int.from_bytes(h[:8], 'little') % dag_size
 
 avg_latency = total_ns / 100_000
 score       = 1.0 / avg_latency
@@ -256,7 +261,7 @@ signature = ECDSA secp256k1
 | Parameter | Value |
 |-----------|-------|
 | HD wallet | BIP-39 / BIP-44 |
-| Mnemonic | 24 words |
+| Mnemonic | 12 words |
 | Derivation path | m/44'/7070'/account'/0/index |
 | Address prefix | POLM |
 | Signature | ECDSA secp256k1 |
@@ -264,7 +269,28 @@ signature = ECDSA secp256k1
 
 ---
 
-## 13. Security Model
+## 13. Polygon Bridge & Oracle
+
+Mining rewards are bridged to Polygon automatically via an ECDSA oracle:
+
+```
+1. Miner submits block → PoLM node validates
+2. Oracle signs block data with ECDSA secp256k1
+3. Oracle submits signed batch to Polygon smart contract
+4. Miner claims ERC-20 POLM at polm.com.br/claim (fee: 0.5 MATIC)
+```
+
+| Parameter | Value |
+|-----------|-------|
+| Network | Polygon PoS (Chain ID 137) |
+| Contract | `0x79175931C54c9765E5846229a0eB118ef24fdE55` |
+| Oracle | `0xcD128d1112Bbb44D61f0557a375E512f14856c93` |
+| Claim fee | 0.5 MATIC |
+| Verification | Sourcify ✅ Blockscout ✅ |
+
+---
+
+## 14. Security Model
 
 | Attack | Defense |
 |--------|---------|
@@ -275,12 +301,14 @@ signature = ECDSA secp256k1
 | Timestamp manipulation | ±120s tolerance enforced |
 | Double spend | Longest chain rule, fast propagation |
 | 51% attack | Requires >50% of total latency-weighted hashrate |
+| Oracle fraud | ECDSA signature required on every block registration |
+| Rug pull | Founder locked 5 years — enforced at consensus level |
 
 **ASIC resistance:** The gap between DDR2 (~3800 ns) and DDR5 (~600 ns) is ~6×. In SHA-256, ASICs are 100,000× faster than CPUs. PoLM's physical constraint means custom silicon has no useful advantage — DRAM latency cannot be engineered away.
 
 ---
 
-## 14. Economics
+## 15. Economics
 
 ### Token parameters
 
@@ -316,7 +344,7 @@ Full supply takes **30+ years** to mine completely. Emission is predictable and 
 
 ---
 
-## 15. Founder Allocation
+## 16. Founder Allocation
 
 | Parameter | Value |
 |-----------|-------|
@@ -334,7 +362,7 @@ if tx.sender == FOUNDER_ADDRESS:
 
 ---
 
-## 16. REST API
+## 17. REST API
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -346,37 +374,73 @@ if tx.sender == FOUNDER_ADDRESS:
 | `/block/<h>` | GET | Block + transactions |
 | `/balance/<addr>` | GET | Address balance |
 | `/miners` | GET | Mining leaderboard |
+| `/register_evm` | POST | Register Polygon wallet |
 | `/peers` | GET | Connected peers |
 
 ---
 
-## 17. Technology Stack
+## 18. Technology Stack
 
-| Component | Current |
-|-----------|---------|
+| Component | Technology |
+|-----------|-----------|
 | Full Node | Python + Flask |
-| Miner | Python |
+| CLI Miner | Python (no dependencies) · auto-update |
+| GUI Miner | Python + Tkinter |
 | Explorer | Python + Flask (v2.2.0) |
-| Wallet | Python + HTML/JS |
-| Database | JSON files |
+| Wallet | Python + HTML/JS (BIP-39/BIP-44) |
+| Oracle | Python + web3.py (ECDSA bridge) |
+| Smart Contract | Solidity (Polygon PoS) |
+| Database | JSON (chain) + SQLite (oracle state) |
 | API | REST / JSON |
 
 ---
 
-## 18. Roadmap
+## 19. Miner Quick Start
+
+### Windows (PowerShell)
+
+```powershell
+# Install Python 3.11
+winget install Python.Python.3.11
+
+# Download miner
+mkdir $env:USERPROFILE\polm
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py" -OutFile "$env:USERPROFILE\polm\miner.py"
+
+# Run
+python $env:USERPROFILE\polm\miner.py
+```
+
+### Linux / macOS
+
+```bash
+curl -O https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py
+python3 polm_miner_cli.py
+```
+
+The miner auto-updates on every run. On first run: generates 12-word BIP-39 wallet, registers Polygon address, starts mining immediately.
+
+---
+
+## 20. Roadmap
 
 - [x] v1.0 — PoLM algorithm designed and tested
 - [x] v1.2 — Mainnet infrastructure · polm.com.br
-- [x] v2.0 — Pure latency consensus · any RAM mines · epoch halving ← **current**
-- [ ] v2.1 — One-click miner UI (Windows .exe)
-- [ ] Bridge — Polygon DEX · POLMTokenV2 (~$0.001/tx)
-- [ ] Trust Wallet / MetaMask integration
-- [ ] CoinMarketCap / CoinGecko listing
+- [x] v2.0 — Pure latency consensus · any RAM mines · epoch halving
+- [x] CLI miner — no dependencies · Windows & Linux · auto-update (v1.5.4)
+- [x] GUI miner — Windows / Linux / macOS
+- [x] Oracle ECDSA — auto-sustaining Polygon bridge
+- [x] Claim page — polm.com.br/claim
+- [x] CPU / OS detection in explorer leaderboard
+- [ ] Mining pool — for slow computers
+- [ ] QuickSwap DEX listing (Polygon)
+- [ ] CoinGecko / CoinMarketCap listing
+- [ ] CEX listing
 - [ ] Epoch 7 — 1 TB RAM mining arrays (new hardware market)
 
 ---
 
-## 19. Conclusion
+## 21. Conclusion
 
 PoLM introduces a fundamentally new class of Proof-of-Work grounded in DRAM physics. By making latency — not compute power — the bottleneck:
 
@@ -385,6 +449,7 @@ PoLM introduces a fundamentally new class of Proof-of-Work grounded in DRAM phys
 3. **ASIC-resistant by physics** — DRAM latency cannot be engineered away
 4. **Hardware evolution is built-in** — epochs force RAM upgrade cycles, creating a new industry by Epoch 7
 5. **Truly decentralized** — any PC with 4 GB+ RAM mines in Epoch 0
+6. **Polygon bridge live** — mine natively, claim ERC-20 POLM on Polygon
 
 The network grows more demanding over time — not through arbitrary rules, but through the natural physics of memory access and the doubling of the DAG. This creates an organic, predictable hardware evolution cycle unprecedented in Proof-of-Work history.
 
@@ -392,6 +457,7 @@ The network grows more demanding over time — not through arbitrary rules, but 
 
 *PoLM is experimental software. Not financial advice.*  
 *Website: https://polm.com.br*  
+*Explorer: https://explorer.polm.com.br*  
 *Twitter: https://x.com/polm2026*  
 *Founder: https://x.com/aluisiofer*  
 *MIT License · © 2026 Aluísio Fernandes (Aluminium)*
