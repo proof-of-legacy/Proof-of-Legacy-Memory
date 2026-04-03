@@ -34,7 +34,7 @@ def detect_ram():
             try:
                 out = subprocess.check_output(
                     ["wmic","memorychip","get","SMBIOSMemoryType,Speed"],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5,
+                    stderr=subprocess.PIPE, text=True, timeout=5,
                     creationflags=0x08000000
                 ).stdout
                 # Parse line by line — first column is SMBIOSMemoryType
@@ -56,7 +56,7 @@ def detect_ram():
             try:
                 out = subprocess.check_output(
                     ["wmic","memorychip","get","Speed"],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5,
+                    stderr=subprocess.PIPE, text=True, timeout=5,
                     creationflags=0x08000000
                 ).stdout
                 speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
@@ -136,7 +136,7 @@ def detect_cpu():
             try:
                 out = subprocess.check_output(
                     ["wmic","cpu","get","name"],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5,
+                    stderr=subprocess.PIPE, text=True, timeout=5,
                     creationflags=0x08000000
                 ).stdout
                 lines = [l.strip() for l in out.splitlines() if l.strip() and l.strip() != "Name"]
@@ -165,7 +165,7 @@ def detect_ram_speed():
         if platform.system() == "Windows":
             out = subprocess.check_output(
                 ["wmic","memorychip","get","Speed"],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=5,
+                stderr=subprocess.PIPE, text=True, timeout=5,
                 creationflags=0x08000000
             ).stdout
             speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
