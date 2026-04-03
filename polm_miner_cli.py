@@ -2,7 +2,7 @@ import hashlib, time, json, struct, urllib.request, secrets, random, os
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.1"
+VERSION    = "1.5.2"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
@@ -153,7 +153,7 @@ def detect_cpu():
                 ["sysctl","-n","machdep.cpu.brand_string"],
                 capture_output=True, text=True, timeout=5
             )
-            if out: return out[:40]
+            if out: return out.strip()[:40]
     except Exception:
         pass
     return ""
