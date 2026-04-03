@@ -36,7 +36,7 @@ def detect_ram():
                     ["wmic","memorychip","get","SMBIOSMemoryType,Speed"],
                     stderr=subprocess.PIPE, text=True, timeout=5,
                     creationflags=0x08000000
-                ).stdout
+                )
                 # Parse line by line — first column is SMBIOSMemoryType
                 lines = [l.strip() for l in out.splitlines() if l.strip() and not l.strip().startswith("S")]
                 for line in lines:
@@ -58,7 +58,7 @@ def detect_ram():
                     ["wmic","memorychip","get","Speed"],
                     stderr=subprocess.PIPE, text=True, timeout=5,
                     creationflags=0x08000000
-                ).stdout
+                )
                 speeds = [int(x) for x in out.split() if x.isdigit() and int(x) > 100]
                 if speeds:
                     avg = sum(speeds)/len(speeds)
