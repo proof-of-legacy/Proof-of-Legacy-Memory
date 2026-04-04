@@ -16,7 +16,7 @@ except (IOError, OSError):
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.5"
+VERSION    = "1.5.6"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
@@ -311,10 +311,28 @@ else:
     polm_addr = settings["polm_address"]
 
 if not polm_addr.startswith("POLM") or not re.match(r"^POLM[0-9A-F]{32}$", polm_addr):
-    print("  [!] Invalid address — must be POLM followed by 32 uppercase hex characters")
-    print("  [!] Example: POLMB89F98D5B714FA63CBBAEBFD2ECE9BA1")
-    print("  [!] Do NOT use your Polygon/EVM address (0x...) here")
-    exit()
+    print("  [!] Invalid POLM address detected:", polm_addr[:20]+"...")
+    print("  [!] Do NOT use your Polygon/EVM (0x...) address here.")
+    print("  [!] Clearing saved settings — please create a new POLM wallet.")
+    try: os.remove("polm_settings.json")
+    except: pass
+    settings = {}
+    polm_addr = ""
+if not polm_addr:
+    print()
+    print("  1 - Generate new wallet")
+    print("  2 - Enter existing address")
+    choice = input("  Choice (1/2): ").strip()
+    if choice == "1":
+        polm_addr, seed_phrase = generate_wallet()
+        print()
+        print("  NEW WALLET CREATED!")
+        print(f"  Address: {polm_addr}")
+        print(f"  Seed: {seed_phrase}")
+        print("  Write on paper! Without it you lose your wallet!")
+        input("  Press Enter after saving seed phrase...")
+    else:
+        polm_addr = input("  Enter POLM address (POLM...): ").strip()
 
 if settings.get("evm_address"):
     evm_addr = settings["evm_address"]
