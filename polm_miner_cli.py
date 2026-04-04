@@ -1,4 +1,4 @@
-import hashlib, time, json, struct, urllib.request, secrets, random, os, sys
+import hashlib, time, json, struct, urllib.request, secrets, random, os, sys, re
 
 # Single instance lock
 _LOCK_FILE = os.path.join(os.path.expanduser("~"), ".polm_miner.lock")
@@ -16,7 +16,7 @@ except (IOError, OSError):
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.4"
+VERSION    = "1.5.5"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
@@ -310,8 +310,11 @@ if not settings.get("polm_address"):
 else:
     polm_addr = settings["polm_address"]
 
-if not polm_addr.startswith("POLM"):
-    print("  [!] Invalid address — must start with POLM"); exit()
+if not polm_addr.startswith("POLM") or not re.match(r"^POLM[0-9A-F]{32}$", polm_addr):
+    print("  [!] Invalid address — must be POLM followed by 32 uppercase hex characters")
+    print("  [!] Example: POLMB89F98D5B714FA63CBBAEBFD2ECE9BA1")
+    print("  [!] Do NOT use your Polygon/EVM address (0x...) here")
+    exit()
 
 if settings.get("evm_address"):
     evm_addr = settings["evm_address"]
