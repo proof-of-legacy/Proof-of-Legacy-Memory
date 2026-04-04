@@ -189,7 +189,10 @@ requirements.txt      ← flask cryptography mnemonic requests
 | | |
 |--|--|
 | 🐦 Project | [@polm2026](https://x.com/polm2026) |
-| 👤 Founder | [@aluisiofer](https://x.com/aluisiofer) |
+| 🐦 Project	@polm2026
+👤 Founder	@aluisiofer
+📱 Telegram	https://t.me/polm2026
+🗣 Bitcointalk	https://bitcointalk.org/index.php?topic=5579305](https://x.com/aluisiofer) |
 | ⚙️ GitHub | [proof-of-legacy](https://github.com/proof-of-legacy/Proof-of-Legacy-Memory) |
 | 📧 Contact | contact@polm.com.br |
 
