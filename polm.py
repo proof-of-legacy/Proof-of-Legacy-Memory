@@ -630,6 +630,8 @@ class Blockchain:
         self.ledger     = Ledger()
         self._miner_ips: dict = {}  # miner_address → ip
         self._ip_wallets: dict = {}  # ip → set of miner_ids
+        self._last_block_time: dict = {}  # miner_id → timestamp real de recebimento
+        self._startup_time: float = time.time()
         self._active_miners: dict = {}  # ip → miner info
         self._peers: set = set()  # known peers
         self.mempool    = Mempool()
@@ -662,6 +664,13 @@ class Blockchain:
                         for k, v in d.get("txs", {}).items()}
             self.tx_block = {int(k): v
                              for k, v in d.get("tx_block", {}).items()}
+        # Carrega mapeamento IP→carteiras do disco
+        ip_wallets_f = self._chain_f.replace("chain", "ip_wallets")
+        if os.path.exists(ip_wallets_f):
+            with open(ip_wallets_f) as f:
+                raw = json.load(f)
+                self._ip_wallets = {ip: set(ids) for ip, ids in raw.items()}
+            print(f"[Chain] IP wallets carregados: {len(self._ip_wallets)} IPs")
         self.ledger.rebuild(
             self.chain,
             {h: [self.txs[i] for i in ids if i in self.txs]
@@ -724,11 +733,12 @@ class Blockchain:
                 return False, "hash mismatch"
             if b.latency_ns < 5:
                 return False, "latency too low (cache exploit)"
-            # Anti-sybil: 1 IP = 1 carteira por sessão
+            # Anti-sybil: 1 IP = 1 carteira (persistido em disco)
             if miner_ip and miner_ip != "unknown":
                 wallets = self._ip_wallets.get(miner_ip, set())
                 if wallets and b.miner_id not in wallets:
-                    return False, f"anti-sybil: IP já registrado com outra carteira nesta sessão"
+                    print(f"[AntiSybil] {miner_ip} bloqueado — já usa {list(wallets)[0][:16]}")
+                    return False, f"anti-sybil: 1 IP = 1 carteira"
             # Registra e valida: 1 IP = 1 carteira
             if miner_ip and miner_ip != "unknown":
                 ok_reg, reason_reg = register_miner(miner_ip, b.miner_id, FOUNDER_ADDRESS)
@@ -790,10 +800,28 @@ class Blockchain:
                 return False, f"wrong reward (expected {expected_reward})"
             if b.timestamp > int(time.time()) + 120:
                 return False, "timestamp too far in future"
+            # ANTI-SYBIL DEFINITIVO: intervalo mínimo por carteira na chain
+            # Não depende de IP, sessão ou memória — está nos timestamps da chain
+            # Usa tempo REAL de recebimento — não o timestamp declarado pelo minerador
+            last_real = self._last_block_time.get(b.miner_id)
+            now_real = time.time()
+            # Só aplica cooldown se o nó está rodando há mais de 120s
+            node_age = now_real - self._startup_time
+            if last_real is not None and node_age > 120:
+                elapsed_real = now_real - last_real
+                if elapsed_real < 120:
+                    wait = int(120 - elapsed_real)
+                    print(f"[Cooldown] {b.miner_id[:16]} bloqueado — aguarde {wait}s")
+                    return False, f"cooldown: aguarde {wait}s"
 
 
             # Update miner activity tracking
             self._active_miners[b.miner_id] = float(b.timestamp)
+            self._last_block_time[b.miner_id] = time.time()
+            # Persiste mapeamento IP→carteiras em disco
+            ip_wallets_f = self._chain_f.replace("chain", "ip_wallets")
+            with open(ip_wallets_f, "w") as f:
+                json.dump({ip: list(ids) for ip, ids in self._ip_wallets.items()}, f)
             # Registra carteira para este IP
             if miner_ip and miner_ip != "unknown":
                 if miner_ip not in self._ip_wallets:
