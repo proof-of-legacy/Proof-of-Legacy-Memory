@@ -184,15 +184,15 @@ def send_chunk(w3, contract, oracle_account, chunk: list) -> list:
     if not block_hashes:
         return []
     try:
-        nonce     = w3.eth.get_transaction_count(oracle_account.address)
-        gas_price = w3.eth.gas_price
+        nonce     = w3.eth.get_transaction_count(oracle_account.address, 'pending')
+        gas_price = int(w3.eth.gas_price * 1.5)
         txn = contract.functions.registerBatch(
             block_hashes, miners, amounts, signatures
         ).build_transaction({
             'from':     oracle_account.address,
             'nonce':    nonce,
             'gasPrice': gas_price,
-            'gas':      800_000,
+            'gas':      2_000_000,
             'chainId':  137,
         })
         signed_txn = oracle_account.sign_transaction(txn)
@@ -203,8 +203,16 @@ def send_chunk(w3, contract, oracle_account, chunk: list) -> list:
             log.info(f'Chunk confirmed! Gas: {receipt.gasUsed}')
             return [e['block_hash'] for e in chunk]
         else:
-            log.error('Chunk failed!')
-            return []
+            log.error('Chunk failed! Trying block by block...')
+            # Fallback: try one by one to skip bad blocks
+            registered = []
+            for entry in chunk:
+                try:
+                    r = send_chunk(w3, contract, oracle_account, [entry])
+                    registered.extend(r)
+                except Exception:
+                    log.warning(f'Block skipped: {entry.get("block_hash","")[:16]}')
+            return registered
     except Exception as e:
         log.error(f'Chunk send failed: {e}')
         return []
@@ -298,6 +306,49 @@ def run():
                         state['last_processed_height'] = height
                         continue
 
+                    # Blacklist de endereços abusivos — não recebem tokens
+                    CLAIM_BLACKLIST = {
+                        "POLM04C4F55F3727C420",
+                        "POLM05D307FD2E1A0FA0",
+                        "POLM094E13F2549927A4",
+                        "POLM156C019009E5837F",
+                        "POLM1769A898AE67C433",
+                        "POLM18882746D52A78FF",
+                        "POLM1EE1BA0567773CC0",
+                        "POLM2E0A324F81D02510",
+                        "POLM2F2FD84F93FD708A",
+                        "POLM33EFA5A0246FB5F1",
+                        "POLM34637C1F2551C673",
+                        "POLM36CAECB001970673",
+                        "POLM44EF48CCB878AE2C",
+                        "POLM48118A2CCCBB8F93",
+                        "POLM49F1506357257BB5",
+                        "POLM5D4EB6593F4BB44D",
+                        "POLM5E41337C1853BBE8",
+                        "POLM5FE84CF8E4D8FF0E",
+                        "POLM60E496E6770C6F36",
+                        "POLM62E9C96F15853B5F",
+                        "POLM851A1EB09BFEE9D2",
+                        "POLM94824D111A4B58A0",
+                        "POLM9D95F04953751FD9",
+                        "POLM9EB3739D023FD4EB",
+                        "POLMA5814A247E77652F",
+                        "POLMAFCB2081F909BC04",
+                        "POLMBC098D437ACB9D2A",
+                        "POLMC126D0A40068DED6",
+                        "POLMC3396E7AC9A292A0",
+                        "POLMC6F8D29D99981CE5",
+                        "POLMD7F6BC3055E7E53C",
+                        "POLMDA3E5A4D810571E1",
+                        "POLMDCEE1969A18077FA",
+                        "POLMDE527C20D9110E59",
+                        "POLME446E1AECF067371",
+                        "POLMFA06C2CA4A3CE5E1",
+                    }
+                    if any(miner_polm.startswith(b) for b in CLAIM_BLACKLIST):
+                        log.warning(f'Block #{height}: BLACKLISTED {miner_polm[:20]} — skip')
+                        state['last_processed_height'] = height
+                        continue
                     miner_evm = get_miner_evm(miner_polm)
                     if not miner_evm:
                         log.warning(f'Block #{height}: no EVM for {miner_polm[:20]}')
