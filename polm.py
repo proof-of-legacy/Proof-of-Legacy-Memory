@@ -739,6 +739,21 @@ class Blockchain:
             max_lat = MAX_LATENCY.get(b.ram_type, 100000.0)
             if b.latency_ns > max_lat:
                 return False, f"latency {b.latency_ns:.1f}ns too high for {b.ram_type} (max {max_lat}ns)"
+            recent_lats = [
+                blk.latency_ns for blk in self.chain[-20:]
+                if blk.miner_id == b.miner_id
+            ]
+            if len(recent_lats) >= 5:
+                unique = len(set(round(l, 0) for l in recent_lats[-5:]))
+                if unique == 1:
+                    return False, f"latency variance zero — hardcoded ({b.latency_ns:.0f}ns)"
+            if len(recent_lats) >= 10:
+                sample = recent_lats[-10:]
+                mean_l = sum(sample)/len(sample)
+                if mean_l > 0:
+                    std_l = (sum((x-mean_l)**2 for x in sample)/len(sample))**0.5
+                    if std_l/mean_l < 0.02:
+                        return False, f"latency CV too low — artificial pattern"
             min_lat = MIN_LATENCY.get(b.ram_type, 50.0)
             if b.latency_ns < min_lat:
                 return False, f"latency {b.latency_ns:.1f}ns too low for {b.ram_type} (min {min_lat}ns)"
