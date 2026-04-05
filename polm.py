@@ -766,6 +766,11 @@ class Blockchain:
                 return False, "wrong reward"
             if b.timestamp > int(time.time()) + 120:
                 return False, "timestamp too far in future"
+            # Cooldown: mesmo minerador não pode minerar mais de 3 blocos consecutivos
+            if len(self.chain) >= 3:
+                last3 = [blk.miner_id for blk in self.chain[-3:]]
+                if all(m == b.miner_id for m in last3):
+                    return False, f"cooldown: {b.miner_id[:16]} minerou os últimos 3 blocos consecutivos"
 
             # Update miner activity tracking
             self._active_miners[b.miner_id] = float(b.timestamp)
