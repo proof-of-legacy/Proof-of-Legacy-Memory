@@ -725,11 +725,20 @@ class Blockchain:
                 return False, "latency too low (cache exploit)"
             # Validate latency is physically plausible for reported RAM type
             MIN_LATENCY = {
-                "DDR2": 50.0,
-                "DDR3": 50.0,
-                "DDR4": 50.0,
-                "DDR5": 50.0,
+                "DDR2": 1500.0,
+                "DDR3": 800.0,
+                "DDR4": 400.0,
+                "DDR5": 450.0,   # DDR5 real: 500-900ns tipico
             }
+            MAX_LATENCY = {
+                "DDR2": 50000.0,
+                "DDR3": 30000.0,
+                "DDR4": 10000.0,
+                "DDR5": 5000.0,
+            }
+            max_lat = MAX_LATENCY.get(b.ram_type, 100000.0)
+            if b.latency_ns > max_lat:
+                return False, f"latency {b.latency_ns:.1f}ns too high for {b.ram_type} (max {max_lat}ns)"
             min_lat = MIN_LATENCY.get(b.ram_type, 50.0)
             if b.latency_ns < min_lat:
                 return False, f"latency {b.latency_ns:.1f}ns too low for {b.ram_type} (min {min_lat}ns)"
@@ -1119,6 +1128,9 @@ class PoLMNode:
                 stats[m]["reward"] += b.reward
                 stats[m]["_lat"].append(b.latency_ns)
                 stats[m]["_sc"].append(b.score)
+                # sempre atualiza ram/cpu/os com o bloco mais recente
+                if b.ram_type:
+                    stats[m]["ram"] = b.ram_type
                 if getattr(b, "cpu_name", ""):
                     stats[m]["cpu"] = b.cpu_name
                 if getattr(b, "os_name", ""):
