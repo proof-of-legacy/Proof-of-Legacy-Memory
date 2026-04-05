@@ -600,13 +600,15 @@ async function loadBlocks(){
 
 function renderBlocks(id,blocks){
   const tb=document.getElementById(id);
-  if(!blocks.length){tb.innerHTML='<tr><td colspan="9" style="color:var(--t3);text-align:center;padding:20px">No blocks yet.</td></tr>';return;}
+  if(!blocks.length){tb.innerHTML='<tr><td colspan="10" style="color:var(--t3);text-align:center;padding:20px">No blocks yet.</td></tr>';return;}
   tb.innerHTML=blocks.map(item=>{
     const b=item.block||item, col=RC[b.ram_type]||'#00e5ff';
+    const cpu_s=(b.cpu_name||'').replace(/Intel\(R\)|AMD|Core\(TM\)|CPU @|@ [\d.]+GHz/g,'').replace(/\s+/g,' ').trim().slice(0,20)||'—';
     return`<tr onclick="location='/block/${b.height}'">
       <td><a class="hl" href="/block/${b.height}">${fn(b.height)}</a></td>
       <td style="color:var(--t3)">${(b.block_hash||'').slice(0,12)}…</td>
       <td style="color:${col}">${(b.miner_id||'').slice(0,18)}…</td>
+      <td style="color:var(--t3);font-size:.68rem">${cpu_s}</td>
       <td>${ram(b.ram_type||'DDR4')}</td>
       <td style="color:var(--amber)">${(b.latency_ns||0).toFixed(0)}ns</td>
       <td style="color:var(--t3)">${fn(Math.round(b.score||0))}</td>
