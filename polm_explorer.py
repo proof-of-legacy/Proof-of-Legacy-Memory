@@ -113,6 +113,7 @@ nav{
 .nav-right{margin-left:auto;display:flex;align-items:center;gap:8px}
 #ts{font-size:.6rem;color:var(--t3);font-family:var(--mono)}
 .rbtn{background:transparent;border:1px solid var(--b1);color:var(--t2);padding:5px 12px;border-radius:6px;cursor:pointer;font-family:var(--mono);font-size:.65rem;transition:all .15s}
+@keyframes pulse-fox{0%,100%{box-shadow:0 0 0 0 rgba(255,140,0,.4)}50%{box-shadow:0 0 0 6px rgba(255,140,0,0)}}
 .rbtn:hover{border-color:var(--cyan);color:var(--cyan)}
 
 /* ── PAGES ── */
@@ -152,22 +153,22 @@ nav{
 .sup-meta{display:flex;justify-content:space-between;font-size:.6rem;color:var(--t3);font-family:var(--mono)}
 
 /* ── LEADERBOARD ── */
-.lb-hdr{display:grid;grid-template-columns:28px 1fr 90px 60px 70px 80px;gap:8px;padding:0 0 8px;border-bottom:1px solid var(--b1);margin-bottom:4px}
-.lb-hdr span{font-size:.58rem;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;font-family:var(--mono)}
+.lb-hdr{display:grid;grid-template-columns:32px 1fr 100px 70px 80px 90px;gap:10px;padding:0 0 10px;border-bottom:1px solid var(--b1);margin-bottom:6px}
+.lb-hdr span{font-size:.68rem;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;font-family:var(--mono)}
 .lb-hdr span:not(:nth-child(2)){text-align:right}
 .lb-hdr span:nth-child(2){text-align:left}
-.lrow{display:grid;grid-template-columns:28px 1fr 90px 60px 70px 80px;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid rgba(26,35,50,.5);transition:background .1s}
+.lrow{display:grid;grid-template-columns:32px 1fr 100px 70px 80px 90px;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid rgba(26,35,50,.5);transition:background .1s}
 .lrow:last-child{border-bottom:none}
 .lrow:hover{background:rgba(0,229,255,.02)}
-.rnk{font-family:var(--mono);font-size:.72rem;font-weight:700;color:var(--t3);text-align:center}
+.rnk{font-family:var(--mono);font-size:.85rem;font-weight:700;color:var(--t3);text-align:center}
 .rnk.r1{color:#ffab00}.rnk.r2{color:#9ca3af}.rnk.r3{color:#cd7f32}
 .minfo{min-width:0}
-.maddr{font-family:var(--mono);font-size:.72rem;color:var(--cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.maddr{font-family:var(--mono);font-size:.82rem;color:var(--cyan);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 .maddr:hover{text-decoration:underline}
-.mmeta{font-size:.6rem;color:var(--t3);margin-top:2px;font-family:var(--mono);display:flex;align-items:center;gap:6px}
+.mmeta{font-size:.7rem;color:var(--t3);margin-top:3px;font-family:var(--mono);display:flex;align-items:center;gap:6px}
 .bar-wrap{position:relative;height:4px;background:var(--s3);border-radius:2px;overflow:hidden}
 .bar-fill{height:100%;border-radius:2px;transition:width .6s}
-.num{font-family:var(--mono);font-size:.72rem;text-align:right;white-space:nowrap}
+.num{font-family:var(--mono);font-size:.78rem;text-align:right;white-space:nowrap}
 .gc{color:var(--green)}.ac{color:var(--amber)}.cc{color:var(--cyan)}.mc{color:var(--t3)}.rc{color:var(--red)}
 
 /* ── RAM BADGES ── */
@@ -269,6 +270,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
     <div class="tab" onclick="show('protocol',this)">Protocol</div>
   </div>
   <div class="nav-right">
+    <a href="https://polm.com.br/claim" target="_blank" style="font-family:var(--mono);font-size:.6rem;color:#ffab00;background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:6px;padding:4px 10px;text-decoration:none;animation:pulse-fox .8s ease-in-out infinite;white-space:nowrap">🦊 Claim — use Firefox</a>
     <span id="ts"></span>
     <button class="rbtn" onclick="load()">↻ refresh</button>
   </div>
@@ -278,7 +280,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
 <div class="page active" id="page-dashboard">
 <div style="max-width:1480px;margin:0 auto;padding:20px 18px">
   <div class="sbar">
-    <input id="q" placeholder="Search block height or hash (64 chars)…" onkeydown="if(event.key==='Enter')go()">
+    <input id="q" placeholder="Search block height, hash (64 chars) or POLM address…" onkeydown="if(event.key==='Enter')go()">
     <button onclick="go()">Search</button>
   </div>
   <div class="sgrid" id="sg"></div>
@@ -335,7 +337,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
   </div>
   <div class="sec">
     <div class="st">Latest blocks <span id="blk-count"></span></div>
-    <table><thead><tr><th>Height</th><th>Hash</th><th>Miner</th><th>RAM</th><th>Latency</th><th>Score</th><th>Nonce</th><th>Reward</th><th>Age</th></tr></thead>
+    <table><thead><tr><th>Height</th><th>Hash</th><th>Miner</th><th>CPU</th><th>RAM</th><th>Latency</th><th>Score</th><th>Nonce</th><th>Reward</th><th>Age</th></tr></thead>
     <tbody id="bt"></tbody></table>
   </div>
 </div>
@@ -384,7 +386,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
   </div>
   <div class="sec">
     <div class="st">All blocks <span id="all-blk-count"></span></div>
-    <table><thead><tr><th>Height</th><th>Hash</th><th>Miner</th><th>RAM</th><th>Latency</th><th>Score</th><th>Nonce</th><th>Reward</th><th>Age</th></tr></thead>
+    <table><thead><tr><th>Height</th><th>Hash</th><th>Miner</th><th>CPU</th><th>RAM</th><th>Latency</th><th>Score</th><th>Nonce</th><th>Reward</th><th>Age</th></tr></thead>
     <tbody id="all-bt"></tbody></table>
     <div style="text-align:center;margin-top:14px"><button class="rbtn" onclick="loadMore()">Load more</button></div>
   </div>
@@ -478,7 +480,7 @@ footer{border-top:1px solid var(--b1);padding:14px 24px;display:flex;justify-con
     <div class="irow"><span class="ik">Project Twitter</span><a class="iv hl" href="https://x.com/polm2026" target="_blank">@polm2026</a></div>
     <div class="irow"><span class="ik">Founder</span><a class="iv hl" href="https://x.com/aluisiofer" target="_blank">@aluisiofer (Aluísio Fernandes — Aluminium)</a></div>
     <div class="irow"><span class="ik">Polygon Token</span><a class="iv hl" href="https://polygonscan.com/token/0x79175931C54c9765E5846229a0eB118ef24fdE55" target="_blank">0x79175931...fdE55</a></div>
-    <div class="irow"><span class="ik">Claim POLM</span><a class="iv hl" href="https://polm.com.br/claim" target="_blank">polm.com.br/claim</a></div>
+    <div class="irow"><span class="ik">Claim POLM</span><a class="iv hl" href="https://polm.com.br/claim" target="_blank">polm.com.br/claim</a> <span style="font-family:var(--mono);font-size:.6rem;color:#ffab00;background:rgba(255,140,0,.1);border:1px solid rgba(255,140,0,.3);border-radius:4px;padding:2px 6px">🦊 Firefox only</span></div>
     <div class="irow"><span class="ik">Roadmap</span><a class="iv hl" href="https://polm.com.br/roadmap" target="_blank">polm.com.br/roadmap</a></div>
     <div class="irow"><span class="ik">Node API</span><a class="iv hl" href="https://polm.com.br/api/" target="_blank">polm.com.br/api/</a></div>
   </div>
@@ -511,6 +513,7 @@ function go(){
   if(!q) return;
   if(/^\d+$/.test(q)) location='/block/'+q;
   else if(q.length===64) location='/block/hash/'+q;
+  else if(q.startsWith('POLM')) location='/balance/'+q;
 }
 
 function ram(r){
@@ -578,8 +581,8 @@ async function loadMiners(){
       <div class="minfo">
         <div class="maddr">${id.slice(0,24)}…</div>
         <div class="mmeta">${ram(v.ram)}<span style="color:var(--t3)">${(v.avg_latency||0).toFixed(0)}ns avg</span><span style="color:${col}">${(v.reward||0).toFixed(0)} POLM earned</span></div>
-        ${v.cpu ? `<div style="font-family:var(--mono);font-size:.68rem;color:var(--t3);margin-top:2px">⚙ ${v.cpu}</div>` : ''}
-      ${v.os ? `<div style="font-family:var(--mono);font-size:.68rem;color:var(--t3);margin-top:1px">🖥 ${v.os}</div>` : ''}
+        ${v.cpu ? `<div style="font-family:var(--mono);font-size:.72rem;color:var(--t3);margin-top:2px">⚙ ${v.cpu}</div>` : ''}
+      ${v.os ? `<div style="font-family:var(--mono);font-size:.72rem;color:var(--t3);margin-top:1px">🖥 ${v.os}</div>` : ''}
       </div>
       <div><div class="bar-wrap"><div class="bar-fill" style="width:${Math.min(pct,100).toFixed(1)}%;background:${col}"></div></div><div class="num mc" style="font-size:.6rem;margin-top:1px">${pct.toFixed(1)}%</div></div>
       <div class="num cc">${v.blocks}</div>
@@ -667,7 +670,8 @@ async function loadMore(){
     const b=item.block||item, col=RC[b.ram_type]||'#00e5ff';
     const tr=document.createElement('tr');
     tr.onclick=()=>location='/block/'+b.height;
-    tr.innerHTML=`<td><a class="hl" href="/block/${b.height}">${fn(b.height)}</a></td><td style="color:var(--t3)">${(b.block_hash||'').slice(0,12)}…</td><td style="color:${col}">${(b.miner_id||'').slice(0,18)}…</td><td>${ram(b.ram_type||'DDR4')}</td><td style="color:var(--amber)">${(b.latency_ns||0).toFixed(0)}ns</td><td style="color:var(--t3)">${fn(Math.round(b.score||0))}</td><td style="color:var(--t3)">${fn(b.nonce||0)}</td><td style="color:var(--green)">${(b.reward||0).toFixed(2)}</td><td style="color:var(--t3)">${age(b.timestamp||0)}</td>`;
+    const cpu_short=(b.cpu_name||'').replace(/Intel\(R\)|Core\(TM\)|CPU|@[\d.]+GHz/g,'').trim().slice(0,22)||'—';
+  tr.innerHTML=`<td><a class="hl" href="/block/${b.height}">${fn(b.height)}</a></td><td style="color:var(--t3)">${(b.block_hash||'').slice(0,12)}…</td><td style="color:${col}">${(b.miner_id||'').slice(0,18)}…</td><td style="color:var(--t3);font-size:.68rem">${cpu_short}</td><td>${ram(b.ram_type||'DDR4')}</td><td style="color:var(--amber)">${(b.latency_ns||0).toFixed(0)}ns</td><td style="color:var(--t3)">${fn(Math.round(b.score||0))}</td><td style="color:var(--t3)">${fn(b.nonce||0)}</td><td style="color:var(--green)">${(b.reward||0).toFixed(2)}</td><td style="color:var(--t3)">${age(b.timestamp||0)}</td>`;
     tb.appendChild(tr);
   });
 }
@@ -771,6 +775,90 @@ def create_explorer(node_url: str = "http://localhost:6060", port: int = 5050):
             if b.get("block_hash") == h:
                 return block_detail(b["height"])
         return "Block not found", 404
+
+
+    @app.route("/balance/<addr>")
+    def balance_page(addr: str):
+        bal = fetch(f"/balance/{addr}") or {}
+        miners = fetch("/miners") or {}
+        miner = miners.get(addr, {})
+        blocks = miner.get("blocks", 0)
+        reward = miner.get("reward", 0)
+        ram = miner.get("ram", "—")
+        cpu = miner.get("cpu", "—")
+        os_name = miner.get("os", "—")
+        avg_lat = miner.get("avg_latency", 0)
+        balance = bal.get("balance", 0)
+        html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PoLM / Miner {addr[:12]}...</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{{--bg:#080c10;--bg2:#0d1117;--cyan:#00e5ff;--green:#00e676;--t1:#e8edf3;--t2:#8b949e;--t3:#484f58;--b1:#21262d;--mono:'JetBrains Mono',monospace;--sans:'Syne',sans-serif;--r:10px}}
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:var(--bg);color:var(--t1);font-family:var(--sans);min-height:100vh;padding:80px 24px 40px}}
+nav{{background:rgba(5,7,10,.98);border-bottom:1px solid var(--b1);height:54px;display:flex;align-items:center;padding:0 24px;gap:14px;position:fixed;top:0;left:0;right:0;z-index:99}}
+.logo{{font-family:var(--mono);font-weight:700;color:var(--cyan);font-size:.95rem;text-decoration:none}}
+.back{{font-family:var(--mono);font-size:.72rem;color:var(--t2);text-decoration:none;border:1px solid var(--b1);padding:5px 12px;border-radius:6px;margin-left:auto}}
+.container{{max-width:800px;margin:0 auto}}
+h1{{font-family:var(--mono);font-size:1.1rem;color:var(--cyan);margin-bottom:6px;word-break:break-all}}
+.sub{{font-size:.75rem;color:var(--t3);font-family:var(--mono);margin-bottom:28px}}
+.card{{background:var(--bg2);border:1px solid var(--b1);border-radius:var(--r);padding:24px;margin-bottom:16px}}
+.grid{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
+.stat-label{{font-size:.6rem;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px}}
+.stat-value{{font-size:1.4rem;font-weight:700;color:var(--t1);font-family:var(--mono)}}
+.stat-sub{{font-size:.65rem;color:var(--t3);font-family:var(--mono);margin-top:3px}}
+.tag{{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.65rem;font-family:var(--mono);font-weight:700;background:rgba(0,229,255,.1);color:var(--cyan);border:1px solid rgba(0,229,255,.2)}}
+footer{{margin-top:32px;text-align:center;font-size:.6rem;color:var(--t3);font-family:var(--mono)}}
+</style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="/">PoLM / Explorer</a>
+  <a class="back" href="/">← Back to Explorer</a>
+</nav>
+<div class="container">
+  <h1>{addr}</h1>
+  <div class="sub">Miner address · PoLM Mainnet</div>
+  <div class="card">
+    <div class="grid">
+      <div>
+        <div class="stat-label">Blocks Mined</div>
+        <div class="stat-value">{blocks:,}</div>
+        <div class="stat-sub">{reward:,.1f} POLM earned</div>
+      </div>
+      <div>
+        <div class="stat-label">Native Balance</div>
+        <div class="stat-value">{balance:,.4f}</div>
+        <div class="stat-sub">POLM on PoLM chain</div>
+      </div>
+      <div>
+        <div class="stat-label">Avg Latency</div>
+        <div class="stat-value">{avg_lat:.0f}<span style="font-size:.8rem">ns</span></div>
+        <div class="stat-sub">RAM access latency</div>
+      </div>
+      <div>
+        <div class="stat-label">RAM Type</div>
+        <div class="stat-value" style="font-size:1.1rem">{ram}</div>
+        <div class="stat-sub">auto-detected</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="stat-label" style="margin-bottom:12px">Hardware</div>
+    <div style="font-family:var(--mono);font-size:.8rem;color:var(--t2);line-height:2">
+      ⚙ {cpu}<br>
+      🖥 {os_name}
+    </div>
+  </div>
+  <footer>PoLM Explorer · polm.com.br · score = 1/latency_ns</footer>
+</div>
+</body>
+</html>"""
+        return html
 
     print(f"\n  PoLM Explorer  v{VERSION}")
     print(f"  {WEBSITE}")
