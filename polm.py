@@ -629,6 +629,7 @@ class Blockchain:
         self.tx_block:  Dict[int, List[str]] = {}
         self.ledger     = Ledger()
         self._miner_ips: dict = {}  # miner_address → ip
+        self._ip_wallets: dict = {}  # ip → set of miner_ids
         self._active_miners: dict = {}  # ip → miner info
         self._peers: set = set()  # known peers
         self.mempool    = Mempool()
@@ -723,6 +724,17 @@ class Blockchain:
                 return False, "hash mismatch"
             if b.latency_ns < 5:
                 return False, "latency too low (cache exploit)"
+            # Anti-sybil: 1 IP = 1 carteira por sessão
+            if miner_ip and miner_ip != "unknown":
+                wallets = self._ip_wallets.get(miner_ip, set())
+                if wallets and b.miner_id not in wallets:
+                    return False, f"anti-sybil: IP já registrado com outra carteira nesta sessão"
+            # Registra e valida: 1 IP = 1 carteira
+            if miner_ip and miner_ip != "unknown":
+                ok_reg, reason_reg = register_miner(miner_ip, b.miner_id, FOUNDER_ADDRESS)
+                if not ok_reg:
+                    return False, f"anti-sybil: {reason_reg}"
+
             # Validate latency is physically plausible for reported RAM type
             MIN_LATENCY = {
                 "DDR2": 1500.0,
@@ -762,18 +774,32 @@ class Blockchain:
             min_lat = MIN_LATENCY.get(b.ram_type, 50.0)
             if b.latency_ns < min_lat:
                 return False, f"latency {b.latency_ns:.1f}ns too low for {b.ram_type} (min {min_lat}ns)"
-            if abs(b.reward - block_reward(b.height)) > 1e-6:
-                return False, "wrong reward"
+            # Penalidade progressiva: recompensa reduz se mesmo IP dominar blocos recentes
+            expected_reward = block_reward(b.height)
+            if miner_ip and miner_ip != "unknown" and len(self.chain) >= 10:
+                last10_ips = []
+                for blk in self.chain[-10:]:
+                    ip = self._miner_ips.get(blk.miner_id, "")
+                    last10_ips.append(ip)
+                same_ip_count = sum(1 for ip in last10_ips if ip == miner_ip)
+                if same_ip_count >= 8:
+                    expected_reward = round(expected_reward * 0.25, 8)  # 75% de penalidade
+                elif same_ip_count >= 6:
+                    expected_reward = round(expected_reward * 0.5, 8)   # 50% de penalidade
+            if abs(b.reward - expected_reward) > 1e-6:
+                return False, f"wrong reward (expected {expected_reward})"
             if b.timestamp > int(time.time()) + 120:
                 return False, "timestamp too far in future"
-            # Cooldown: mesmo minerador não pode minerar mais de 3 blocos consecutivos
-            if len(self.chain) >= 3:
-                last3 = [blk.miner_id for blk in self.chain[-3:]]
-                if all(m == b.miner_id for m in last3):
-                    return False, f"cooldown: {b.miner_id[:16]} minerou os últimos 3 blocos consecutivos"
+
 
             # Update miner activity tracking
             self._active_miners[b.miner_id] = float(b.timestamp)
+            # Registra carteira para este IP
+            if miner_ip and miner_ip != "unknown":
+                if miner_ip not in self._ip_wallets:
+                    self._ip_wallets[miner_ip] = set()
+                self._ip_wallets[miner_ip].add(b.miner_id)
+                self._miner_ips[b.miner_id] = miner_ip
 
             confirmed_ids: List[str] = []
             for tx in txs:
@@ -1025,7 +1051,7 @@ class PoLMNode:
                 d       = request.json or {}
                 b       = Block.from_dict(d["block"])
                 txs     = [Transaction.from_dict(t) for t in d.get("txs", [])]
-                miner_ip = request.remote_addr or "unknown"
+                miner_ip = request.headers.get("X-Forwarded-For", request.remote_addr) or "unknown"
 
 
                 ok, reason = self.chain.add_block(b, txs)
