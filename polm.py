@@ -89,7 +89,7 @@ MAX_SUPPLY          = 210_000_000       # ~210M total over 30+ years
 INITIAL_REWARD      = 50.0              # 50 POLM/block — halving launch
 BLOCK_TIME          = 120             # 2 minutes — stable like Litecoin
 DIFF_WINDOW         = 144             # blocks per retarget (~4.8h at 2min/block)
-DIFF_CLAMP          = 0.25            # ±25% max adjustment
+DIFF_CLAMP          = 4.0             # permite até 4x por janela para ajuste rápido
 
 # ── EPOCH / RAM HALVING SYSTEM ──────────────────────────────────
 # Halving is driven by RAM epochs, not just block count.
