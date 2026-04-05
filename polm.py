@@ -754,6 +754,11 @@ class Blockchain:
                     std_l = (sum((x-mean_l)**2 for x in sample)/len(sample))**0.5
                     if std_l/mean_l < 0.02:
                         return False, f"latency CV too low — artificial pattern"
+            # Rejeita se ultimos 5 blocos do minerador tem valor fixo (nao-consecutivos)
+            if len(recent_lats) >= 5:
+                last5 = recent_lats[-5:]
+                if len(set(round(l,-1) for l in last5)) == 1:
+                    return False, f"latency fixed pattern in last 5 blocks ({b.latency_ns:.0f}ns)"
             min_lat = MIN_LATENCY.get(b.ram_type, 50.0)
             if b.latency_ns < min_lat:
                 return False, f"latency {b.latency_ns:.1f}ns too low for {b.ram_type} (min {min_lat}ns)"
