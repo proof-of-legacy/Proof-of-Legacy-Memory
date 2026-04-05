@@ -670,7 +670,7 @@ async function loadMore(){
     const b=item.block||item, col=RC[b.ram_type]||'#00e5ff';
     const tr=document.createElement('tr');
     tr.onclick=()=>location='/block/'+b.height;
-    const cpu_short=(b.cpu_name||'').replace(/Intel\(R\)|Core\(TM\)|CPU|@[\d.]+GHz/g,'').trim().slice(0,22)||'—';
+    const cpu_short=(b.cpu_name||'').replace(/Intel\(R\)|AMD|Core\(TM\)|CPU @|@ [\d.]+GHz/g,'').replace(/\s+/g,' ').trim().slice(0,20)||'—';
   tr.innerHTML=`<td><a class="hl" href="/block/${b.height}">${fn(b.height)}</a></td><td style="color:var(--t3)">${(b.block_hash||'').slice(0,12)}…</td><td style="color:${col}">${(b.miner_id||'').slice(0,18)}…</td><td style="color:var(--t3);font-size:.68rem">${cpu_short}</td><td>${ram(b.ram_type||'DDR4')}</td><td style="color:var(--amber)">${(b.latency_ns||0).toFixed(0)}ns</td><td style="color:var(--t3)">${fn(Math.round(b.score||0))}</td><td style="color:var(--t3)">${fn(b.nonce||0)}</td><td style="color:var(--green)">${(b.reward||0).toFixed(2)}</td><td style="color:var(--t3)">${age(b.timestamp||0)}</td>`;
     tb.appendChild(tr);
   });
@@ -725,6 +725,10 @@ def create_explorer(node_url: str = "http://localhost:6060", port: int = 5050):
     def api_summary():
         d = fetch("/")
         return app.response_class(json.dumps(d or {"error":"offline"}), mimetype="application/json")
+
+    @app.route("/blocks")
+    def blocks_page():
+        return render_template_string(HTML)
 
     @app.route("/api/blocks")
     def api_blocks():
