@@ -629,9 +629,10 @@ class Blockchain:
         self.tx_block:  Dict[int, List[str]] = {}
         self.ledger     = Ledger()
         self._miner_ips: dict = {}  # miner_address → ip
-        self._ip_wallets: dict = {}  # ip → set of miner_ids
-        self._last_block_time: dict = {}  # miner_id → timestamp real de recebimento
+        self._block_ips: list = []  # [(height, ip)] ultimos 20 blocos
+        self._last_block_time: dict = {}  # miner_id → real receive time
         self._startup_time: float = time.time()
+        self._ip_wallets: dict = {}  # ip → set of miner_ids
         self._active_miners: dict = {}  # ip → miner info
         self._peers: set = set()  # known peers
         self.mempool    = Mempool()
@@ -653,7 +654,7 @@ class Blockchain:
         if os.path.exists(self._chain_f):
             with open(self._chain_f, encoding="utf-8") as f:
                 self.chain = [Block.from_dict(d) for d in json.load(f)]
-            self._diff = max(5, self.chain[-1].difficulty)
+            self._diff = max(3, min(3, self.chain[-1].difficulty))
             print(f"[Chain] Loaded {len(self.chain)} blocks  height={self.height}")
         else:
             self._genesis()
@@ -664,13 +665,6 @@ class Blockchain:
                         for k, v in d.get("txs", {}).items()}
             self.tx_block = {int(k): v
                              for k, v in d.get("tx_block", {}).items()}
-        # Carrega mapeamento IP→carteiras do disco
-        ip_wallets_f = self._chain_f.replace("chain", "ip_wallets")
-        if os.path.exists(ip_wallets_f):
-            with open(ip_wallets_f) as f:
-                raw = json.load(f)
-                self._ip_wallets = {ip: set(ids) for ip, ids in raw.items()}
-            print(f"[Chain] IP wallets carregados: {len(self._ip_wallets)} IPs")
         self.ledger.rebuild(
             self.chain,
             {h: [self.txs[i] for i in ids if i in self.txs]
@@ -715,7 +709,7 @@ class Blockchain:
             return
         ratio = BLOCK_TIME * (DIFF_WINDOW - 1) / elapsed
         ratio = max(1 - DIFF_CLAMP, min(1 + DIFF_CLAMP, ratio))
-        self._diff = max(1, round(self._diff * ratio))
+        self._diff = max(3, round(self._diff * ratio))
         print(f"[Chain] Difficulty retarget  ->  {self._diff}")
 
     # ── add block ─────────────────────────────────────────────────
@@ -733,12 +727,24 @@ class Blockchain:
                 return False, "hash mismatch"
             if b.latency_ns < 5:
                 return False, "latency too low (cache exploit)"
-            # Anti-sybil: 1 IP = 1 carteira (persistido em disco)
+            # Limite de nonce baseado em hardware real observado
+            # DDR4 legítimo: max 1.323 | DDR3: max 13 | DDR5: max 132
+            # Atacante QEMU: bilhões — claramente fora do padrão
+            MAX_NONCE = {
+                "DDR2": 50_000,
+                "DDR3": 50_000,
+                "DDR4": 5_000_000,
+                "DDR5": 5_000_000,
+            }
+            max_nonce = MAX_NONCE.get(b.ram_type, 5_000_000)
+            if b.nonce > max_nonce:
+                return False, f"nonce {b.nonce:,} acima do limite para {b.ram_type}"
+
+            # Anti-sybil: 1 IP = 1 carteira por sessão
             if miner_ip and miner_ip != "unknown":
                 wallets = self._ip_wallets.get(miner_ip, set())
                 if wallets and b.miner_id not in wallets:
-                    print(f"[AntiSybil] {miner_ip} bloqueado — já usa {list(wallets)[0][:16]}")
-                    return False, f"anti-sybil: 1 IP = 1 carteira"
+                    return False, f"anti-sybil: IP já registrado com outra carteira nesta sessão"
             # Registra e valida: 1 IP = 1 carteira
             if miner_ip and miner_ip != "unknown":
                 ok_reg, reason_reg = register_miner(miner_ip, b.miner_id, FOUNDER_ADDRESS)
@@ -786,42 +792,32 @@ class Blockchain:
                 return False, f"latency {b.latency_ns:.1f}ns too low for {b.ram_type} (min {min_lat}ns)"
             # Penalidade progressiva: recompensa reduz se mesmo IP dominar blocos recentes
             expected_reward = block_reward(b.height)
-            if miner_ip and miner_ip != "unknown" and len(self.chain) >= 10:
-                last10_ips = []
-                for blk in self.chain[-10:]:
-                    ip = self._miner_ips.get(blk.miner_id, "")
-                    last10_ips.append(ip)
-                same_ip_count = sum(1 for ip in last10_ips if ip == miner_ip)
-                if same_ip_count >= 8:
-                    expected_reward = round(expected_reward * 0.25, 8)  # 75% de penalidade
-                elif same_ip_count >= 6:
-                    expected_reward = round(expected_reward * 0.5, 8)   # 50% de penalidade
-            if abs(b.reward - expected_reward) > 1e-6:
-                return False, f"wrong reward (expected {expected_reward})"
+            if miner_ip and miner_ip != "unknown" and len(self._block_ips) >= 10:
+                same_ip = sum(1 for _, ip in self._block_ips[-10:] if ip == miner_ip)
+                if same_ip >= 9:
+                    expected_reward = round(expected_reward * 0.1, 8)   # 90% penalidade
+                elif same_ip >= 7:
+                    expected_reward = round(expected_reward * 0.25, 8)  # 75% penalidade
+                elif same_ip >= 5:
+                    expected_reward = round(expected_reward * 0.5, 8)   # 50% penalidade
+            # Aceita o bloco mas aplica recompensa penalizada no ledger
+            b_reward_applied = expected_reward
             if b.timestamp > int(time.time()) + 120:
                 return False, "timestamp too far in future"
-            # ANTI-SYBIL DEFINITIVO: intervalo mínimo por carteira na chain
-            # Não depende de IP, sessão ou memória — está nos timestamps da chain
-            # Usa tempo REAL de recebimento — não o timestamp declarado pelo minerador
-            last_real = self._last_block_time.get(b.miner_id)
-            now_real = time.time()
-            # Só aplica cooldown se o nó está rodando há mais de 120s
-            node_age = now_real - self._startup_time
-            if last_real is not None and node_age > 120:
-                elapsed_real = now_real - last_real
-                if elapsed_real < 120:
-                    wait = int(120 - elapsed_real)
-                    print(f"[Cooldown] {b.miner_id[:16]} bloqueado — aguarde {wait}s")
-                    return False, f"cooldown: aguarde {wait}s"
+            # Minimum block time: bloco deve ser >= timestamp anterior + 30s
+            if b.height > 1:
+                prev_ts = self.chain[-1].timestamp
+                if b.timestamp < prev_ts + 30:
+                    return False, f"block time too short: {b.timestamp - prev_ts}s (min 30s)"
+
 
 
             # Update miner activity tracking
             self._active_miners[b.miner_id] = float(b.timestamp)
             self._last_block_time[b.miner_id] = time.time()
-            # Persiste mapeamento IP→carteiras em disco
-            ip_wallets_f = self._chain_f.replace("chain", "ip_wallets")
-            with open(ip_wallets_f, "w") as f:
-                json.dump({ip: list(ids) for ip, ids in self._ip_wallets.items()}, f)
+            if miner_ip and miner_ip != "unknown":
+                self._block_ips.append((b.height, miner_ip))
+                self._block_ips = self._block_ips[-20:]
             # Registra carteira para este IP
             if miner_ip and miner_ip != "unknown":
                 if miner_ip not in self._ip_wallets:
@@ -842,7 +838,9 @@ class Blockchain:
             self.tx_block[b.height] = confirmed_ids
             b.tx_ids = confirmed_ids
 
-            self.ledger.apply_reward(b.miner_id, b.reward)
+            actual_reward = b_reward_applied
+            self.ledger.apply_reward(b.miner_id, actual_reward)
+            b.reward = actual_reward  # atualiza o bloco com recompensa real
             self.chain.append(b)
             self._retarget()
             self._save()
