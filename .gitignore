@@ -1,53 +1,14 @@
-# PoLM — gitignore
-__pycache__/
-*.py[cod]
-*.pyo
-venv/
-env/
-
-# Chain data (each node has its own)
-chain.json
-txs.json
 *.db
-*.db.tmp
-*.json.tmp
-
-# Wallet (NEVER commit private keys)
-wallet.json
-*.wallet
-
-# Logs
 *.log
-/tmp/
-
-# Generated launchers
-start_node.bat
-start_miner.bat
-start_wallet.bat
-start_explorer.bat
-start_all.bat
-polm.bat
-start_node.sh
-start_miner.sh
-start_wallet.sh
-start_explorer.sh
-start_all.sh
-miner_address.txt
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Chain and wallet data files
-polm_chain*.json
-polmx_chain*.json
-polm_peers.json
-polm_wallet*.json
-*.json
-!package.json
-backup-final/
-nohup.out
 *.bak
-0
-LICENSE
+*.pyc
+__pycache__/
+venv/
+polm_settings.json
+polm_peers.json
+chain.json
+tsv_state.json
+polm.py
+polm_bridge_oracle.py
+polm_explorer.py
+temporal_sync.py
