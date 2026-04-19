@@ -1,0 +1,157 @@
+/*
+ * PoLM PoSMA Library v2.0 — Implementação
+ * Proof of Sequential Memory Access
+ *
+ * Build como lib compartilhada (para Oracle via ctypes):
+ *   gcc -O2 -shared -fPIC -o polm_posma.so polm_posma.c -lssl -lcrypto
+ *
+ * Build estático (para linkar no minerador):
+ *   gcc -O2 -c polm_posma.c -o polm_posma.o -lssl -lcrypto
+ */
+
+#include "polm_posma.h"
+#include "blake3.h"  /* BLAKE3 — 3.3x mais rápido que SHA3 no caminho PoSMA */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <openssl/evp.h>
+
+/* ── BLAKE3 helper — usado APENAS no caminho PoSMA ──────────── */
+/* NOTA: Hash final do bloco continua usando SHA3-256 (posma_final_hash) */
+static uint64_t blake3_next_index(uint64_t current_idx, uint64_t nonce,
+                                   const char *salt, int step,
+                                   size_t num_slots) {
+    blake3_hasher hasher;
+    blake3_hasher_init(&hasher);
+    blake3_hasher_update(&hasher, &current_idx, sizeof(uint64_t));
+    blake3_hasher_update(&hasher, &nonce,        sizeof(uint64_t));
+    blake3_hasher_update(&hasher, salt,           strlen(salt));
+    blake3_hasher_update(&hasher, &step,          sizeof(int));
+    uint8_t out[8];
+    blake3_hasher_finalize(&hasher, out, 8);
+    uint64_t next;
+    memcpy(&next, out, 8);
+    return next % num_slots;
+}
+
+static uint64_t blake3_start_index(uint64_t nonce, const char *salt,
+                                    size_t num_slots) {
+    blake3_hasher hasher;
+    blake3_hasher_init(&hasher);
+    blake3_hasher_update(&hasher, &nonce, sizeof(uint64_t));
+    blake3_hasher_update(&hasher, salt,   strlen(salt));
+    uint8_t tag[] = "start";
+    blake3_hasher_update(&hasher, tag, 5);
+    uint8_t out[8];
+    blake3_hasher_finalize(&hasher, out, 8);
+    uint64_t idx;
+    memcpy(&idx, out, 8);
+    return idx % num_slots;
+}
+
+/* ── SHA3-256 helper ──────────────────────────────────────── */
+static void sha3_256_bytes(const uint8_t *input, size_t ilen, uint8_t *out32) {
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    EVP_DigestInit_ex(ctx, EVP_sha3_256(), NULL);
+    EVP_DigestUpdate(ctx, input, ilen);
+    unsigned int hlen = 32;
+    EVP_DigestFinal_ex(ctx, out32, &hlen);
+    EVP_MD_CTX_free(ctx);
+}
+
+static void sha3_256_str(const char *input, uint8_t *out32) {
+    sha3_256_bytes((const uint8_t *)input, strlen(input), out32);
+}
+
+static void bytes_to_hex(const uint8_t *bytes, size_t len, char *hex_out) {
+    for (size_t i = 0; i < len; i++)
+        snprintf(hex_out + i*2, 3, "%02x", bytes[i]);
+    hex_out[len*2] = '\0';
+}
+
+/* ── DAG Generation ───────────────────────────────────────── */
+void posma_generate_dag(uint8_t *dag, const char *seed, const char *epoch_salt) {
+    /*
+     * Preenche DAG com SHA-256 encadeado + salt por época.
+     * Salt impede pré-cálculo do DAG entre épocas.
+     * Formato de cada chunk: SHA256("polm_dag:{seed}:{epoch_salt}:{chunk_idx}")
+     */
+    uint8_t hash[32];
+    char block[512];
+    size_t pos = 0;
+    int chunk = 0;
+
+    while (pos < DAG_SIZE_BYTES) {
+        snprintf(block, sizeof(block), "polm_dag:%s:%s:%d", seed, epoch_salt, chunk++);
+        sha3_256_str(block, hash);
+        size_t copy = (DAG_SIZE_BYTES - pos < 32) ? DAG_SIZE_BYTES - pos : 32;
+        memcpy(dag + pos, hash, copy);
+        pos += copy;
+    }
+}
+
+/* ── PoSMA Path Calculation ───────────────────────────────── */
+void posma_calculate_path(const uint8_t *dag, uint64_t nonce,
+                          const char *salt, PosmaResult *result) {
+    /*
+     * Caminho DETERMINÍSTICO dado nonce+salt.
+     * Fórmula: Next_Index = SHA3(Current_Index || Nonce || Salt) % (DAG_Size / Stride)
+     *
+     * STRIDE = 4096 bytes — garante cache miss na DRAM real.
+     * Cada step lê 8 bytes do DAG no índice calculado.
+     */
+    size_t num_slots = DAG_SIZE_BYTES / POSMA_STRIDE;  /* 65536 slots de 4KB */
+    /* hash_buf e hash_input removidos — BLAKE3 usa API própria */
+
+    /* Índice inicial: BLAKE3(nonce || salt || "start") — 3.3x mais rápido que SHA3 */
+    uint64_t current_idx = blake3_start_index(nonce, salt, num_slots);
+
+    for (int step = 0; step < POSMA_STEPS; step++) {
+        /* Endereço físico na DRAM — stride de 4KB garante cache miss */
+        size_t byte_addr = current_idx * POSMA_STRIDE;
+
+        /* Lê 8 bytes do DAG neste endereço */
+        uint64_t val;
+        memcpy(&val, dag + byte_addr, 8);
+
+        /* Armazena no merge_value */
+        memcpy(result->merge_value + step * 8, &val, 8);
+        result->indices[step] = current_idx;
+
+        /* Próximo índice: BLAKE3(current_idx || nonce || salt || step) */
+        current_idx = blake3_next_index(current_idx, nonce, salt, step, num_slots);
+    }
+}
+
+/* ── Final Hash ───────────────────────────────────────────── */
+void posma_final_hash(uint64_t nonce, const char *salt, const char *seed,
+                      const uint8_t *merge_value, char *hash_hex_out) {
+    /*
+     * Hash Final = SHA3(nonce || salt || seed || merge_value)
+     * Se o minerador inventar merge_value, este hash não vai bater
+     * quando o Oracle recalcular o caminho real.
+     */
+    size_t header_len = 64 + strlen(salt) + strlen(seed) + 2;
+    size_t total_len  = header_len + MERGE_VALUE_BYTES;
+    uint8_t *buf = (uint8_t *)malloc(total_len + 64);
+
+    char header[512];
+    snprintf(header, sizeof(header), "%llu|%s|%s|",
+             (unsigned long long)nonce, salt, seed);
+    size_t hlen = strlen(header);
+
+    memcpy(buf, header, hlen);
+    memcpy(buf + hlen, merge_value, MERGE_VALUE_BYTES);
+
+    uint8_t hash[32];
+    sha3_256_bytes(buf, hlen + MERGE_VALUE_BYTES, hash);
+    bytes_to_hex(hash, 32, hash_hex_out);
+    free(buf);
+}
+
+/* ── Target Check ─────────────────────────────────────────── */
+int posma_meets_target(const char *hash_hex, int difficulty) {
+    for (int i = 0; i < difficulty; i++)
+        if (hash_hex[i] != '0') return 0;
+    return 1;
+}
