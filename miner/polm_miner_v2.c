@@ -1,5 +1,5 @@
 /*
- * PoLM Miner C v2.0.0 — Proof of Real Memory (PoRM)
+ * PoLM Miner C v3.0.0 — Proof of Real Memory (PoRM)
  * Implementa PoSMA: prova criptográfica de acesso físico à RAM
  *
  * Build:
@@ -22,7 +22,7 @@
 #include <curl/curl.h>
 #include "polm_posma.h"
 
-#define VERSION      "2.0.0"
+#define VERSION      "3.0.0"
 #define NONCE_MIN    100
 
 /* ── Globals ──────────────────────────────────────────────── */
@@ -202,13 +202,23 @@ static void merge_to_hex(const uint8_t *merge, char *hex_out) {
 
 /* ── Main ─────────────────────────────────────────────────── */
 int main(int argc, char *argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <POLM_ADDRESS> [NODE_URL]\n", argv[0]);
+    const char *polm_addr = NULL;
+    const char *node_url  = "https://polm.com.br/api";
+
+    for (int i = 1; i < argc; i++) {
+        if ((strcmp(argv[i], "--wallet") == 0 || strcmp(argv[i], "-w") == 0) && i+1 < argc)
+            polm_addr = argv[++i];
+        else if (strcmp(argv[i], "--api") == 0 && i+1 < argc)
+            node_url = argv[++i];
+        else if (argv[i][0] != '-' && !polm_addr)
+            polm_addr = argv[i];
+    }
+    if (!polm_addr) {
+        fprintf(stderr, "\nPoLM Miner v3.0.0 — Proof of Real Memory\n");
+        fprintf(stderr, "Usage:   %s --wallet <POLM_ADDRESS>\n", argv[0]);
+        fprintf(stderr, "Example: %s --wallet POLMB89F98D5B714FA63CBBAEBFD2ECE9BA1\n\n", argv[0]);
         return 1;
     }
-
-    const char *polm_addr = argv[1];
-    const char *node_url  = (argc >= 3) ? argv[2] : "https://polm.com.br/api";
 
     signal(SIGINT,  sig_handler);
     signal(SIGTERM, sig_handler);
@@ -234,8 +244,9 @@ int main(int argc, char *argv[]) {
     dag = (uint8_t *)mmap(NULL, DAG_SIZE_BYTES, PROT_READ | PROT_WRITE,
                           MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
     if (dag == MAP_FAILED) {
+        printf("  Huge Pages: indisponivel (usando RAM padrao — latencia pode ser 10-15ns maior)\n");
         dag = (uint8_t *)malloc(DAG_SIZE_BYTES);
-        if (!dag) { fprintf(stderr, "ERROR: OOM\n"); return 1; }
+        if (!dag) { fprintf(stderr, "ERROR: sem memoria suficiente (precisa 256MB livres)\n"); return 1; }
     } else {
         printf("  Huge Pages: ativado (TLB otimizado)\n");
     }
