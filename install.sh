@@ -13,9 +13,10 @@ if ! command -v wget &>/dev/null && ! command -v curl &>/dev/null; then
 fi
 
 # Verificar RAM
-RAM_GB=$(free -g | awk '/^Mem:/{print $2}')
-if [ "$RAM_GB" -lt 4 ]; then
-    echo "[!] Atenção: menos de 4GB de RAM detectado. Mínimo recomendado: 8GB."
+RAM_KB=$(grep MemTotal /proc/meminfo | awk "{print $2}")
+RAM_GB=$((RAM_KB / 1024 / 1024))
+if [ "$RAM_GB" -lt 4 ] 2>/dev/null; then
+    echo "[!] Atencao: menos de 4GB de RAM. Minimo recomendado: 8GB."
 fi
 
 # Baixar binário
