@@ -15,7 +15,7 @@
 
 ### Instalação em 3 comandos
 ```bash
-wget https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/download/v3.0.0/polm-miner-linux-amd64
+wget https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/download/v3.0.1/polm-miner-linux-amd64
 chmod +x polm-miner-linux-amd64
 ./polm-miner-linux-amd64 --wallet SUA_CARTEIRA_POLYGON
 ```

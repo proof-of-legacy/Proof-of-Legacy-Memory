@@ -21,7 +21,7 @@ fi
 # Baixar binário
 INSTALL_DIR="$HOME/polm-miner"
 mkdir -p "$INSTALL_DIR"
-echo "[*] Baixando PoLM Miner v3.0.0..."
+echo "[*] Baixando PoLM Miner v3.0.1..."
 wget -q --show-progress -O "$INSTALL_DIR/polm-miner" \
     https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/latest/download/polm-miner-linux-amd64
 chmod +x "$INSTALL_DIR/polm-miner"
@@ -58,7 +58,7 @@ read -p "Deseja instalar como serviço (iniciar no boot)? [s/N]: " SYSTEMD
 if [[ "$SYSTEMD" =~ ^[Ss]$ ]]; then
     sudo tee /etc/systemd/system/polm-miner.service > /dev/null << SVCEOF
 [Unit]
-Description=PoLM Miner v3.0.0 — Proof of Real Memory
+Description=PoLM Miner v3.0.1 — Proof of Real Memory
 After=network.target
 
 [Service]
