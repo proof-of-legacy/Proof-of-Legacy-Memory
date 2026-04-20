@@ -22,7 +22,7 @@
 #include <curl/curl.h>
 #include "polm_posma.h"
 
-#define VERSION      "3.0.0"
+#define VERSION      "3.0.1"
 #define NONCE_MIN    100
 
 /* ── Globals ──────────────────────────────────────────────── */
