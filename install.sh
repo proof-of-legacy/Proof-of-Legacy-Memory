@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e
 
 echo ""
 echo "⛏  PoLM Easy Miner — Instalação"
@@ -18,7 +17,7 @@ if [ "$RAM_GB" -lt 4 ]; then
 fi
 
 INSTALL_DIR="$HOME/polm-miner"
-mkdir -p "$INSTALL_DIR"
+mkdir -p 2>/dev/null ||true; mkdir -p "$INSTALL_DIR"
 echo "[*] Baixando PoLM Miner v3.0.1..."
 wget -q --show-progress -O "$INSTALL_DIR/polm-miner" \
     https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/download/v3.0.1/polm-miner-linux-amd64
