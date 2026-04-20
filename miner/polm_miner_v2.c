@@ -200,6 +200,46 @@ static void merge_to_hex(const uint8_t *merge, char *hex_out) {
     hex_out[MERGE_VALUE_BYTES * 2] = '\0';
 }
 
+
+#include <openssl/sha.h>
+/* ── Geração de carteira POLM ─────────────────────────────── */
+static void generate_polm_wallet(char *addr_out, size_t addr_len) {
+    uint8_t priv[32];
+    FILE *f = fopen("/dev/urandom", "rb");
+    if (!f || fread(priv, 1, 32, f) != 32) {
+        fprintf(stderr, "Erro ao gerar carteira\n"); exit(1);
+    }
+    if (f) fclose(f);
+    uint8_t hash[32];
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+    SHA256_Update(&ctx, priv, 32);
+    SHA256_Final(hash, &ctx);
+    snprintf(addr_out, addr_len, "POLM");
+    for (int i = 0; i < 16; i++)
+        snprintf(addr_out + 4 + i*2, addr_len - 4 - i*2, "%02X", hash[i]);
+    char wf_path[512];
+    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+    FILE *wf = fopen(wf_path, "w");
+    if (wf) { fprintf(wf, "address=%s\n", addr_out); fclose(wf); }
+}
+
+static int load_polm_wallet(char *addr_out, size_t addr_len) {
+    char wf_path[512];
+    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+    FILE *wf = fopen(wf_path, "r");
+    if (!wf) return 0;
+    char line[256];
+    while (fgets(line, sizeof(line), wf)) {
+        if (strncmp(line, "address=", 8) == 0) {
+            line[strcspn(line, "\n")] = 0;
+            strncpy(addr_out, line + 8, addr_len - 1);
+            fclose(wf); return 1;
+        }
+    }
+    fclose(wf); return 0;
+}
+
 /* ── Main ─────────────────────────────────────────────────── */
 int main(int argc, char *argv[]) {
     const char *polm_addr = NULL;
@@ -213,11 +253,58 @@ int main(int argc, char *argv[]) {
         else if (argv[i][0] != '-' && !polm_addr)
             polm_addr = argv[i];
     }
+    /* Onboarding interativo se sem carteira */
+    static char wallet_buf[128] = {0};
     if (!polm_addr) {
-        fprintf(stderr, "\nPoLM Miner v3.0.0 — Proof of Real Memory\n");
-        fprintf(stderr, "Usage:   %s --wallet <POLM_ADDRESS>\n", argv[0]);
-        fprintf(stderr, "Example: %s --wallet POLMB89F98D5B714FA63CBBAEBFD2ECE9BA1\n\n", argv[0]);
-        return 1;
+        printf("\n====================================================\n");
+        printf("  PoLM Miner v3.0.0 — Proof of Real Memory\n");
+        printf("====================================================\n\n");
+        if (load_polm_wallet(wallet_buf, sizeof(wallet_buf))) {
+            printf("  Carteira salva: %s\n  Usar esta? [S/n]: ", wallet_buf);
+            char resp[8] = {0};
+            if (fgets(resp, sizeof(resp), stdin) && (resp[0]=='n'||resp[0]=='N'))
+                wallet_buf[0] = 0;
+            else
+                polm_addr = wallet_buf;
+        }
+        if (!polm_addr) {
+            printf("  Voce ja tem carteira POLM? [s/N]: ");
+            char resp[8] = {0};
+            fgets(resp, sizeof(resp), stdin);
+            if (resp[0]=='s'||resp[0]=='S') {
+                printf("  Digite seu endereco POLM: ");
+                if (fgets(wallet_buf, sizeof(wallet_buf), stdin)) {
+                    wallet_buf[strcspn(wallet_buf, "\n")] = 0;
+                    polm_addr = wallet_buf;
+                    char wf_path[512];
+                    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+                    FILE *wf = fopen(wf_path, "w");
+                    if (wf) { fprintf(wf, "address=%s\n", polm_addr); fclose(wf); }
+                }
+            } else {
+                printf("\n  Gerando nova carteira POLM...\n");
+                generate_polm_wallet(wallet_buf, sizeof(wallet_buf));
+                polm_addr = wallet_buf;
+                printf("  Endereco POLM: %s\n", polm_addr);
+                printf("  IMPORTANTE: Anote este endereco para resgatar seus tokens!\n\n");
+        printf("  Digite seu endereco Polygon/MetaMask (0x...) para resgatar tokens:\n");
+        printf("  (Pressione Enter para pular por enquanto)\n  Polygon: ");
+        static char poly_buf[128] = {0};
+        if (fgets(poly_buf, sizeof(poly_buf), stdin)) {
+            poly_buf[strcspn(poly_buf, "\n")] = 0;
+            if (strlen(poly_buf) > 5) {
+                char wf_path[512];
+                snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+                FILE *wf = fopen(wf_path, "a");
+                if (wf) { fprintf(wf, "polygon=%s\n", poly_buf); fclose(wf); }
+                printf("  Polygon salvo: %s\n\n", poly_buf);
+            }
+        }
+            }
+        }
+    }
+    if (!polm_addr || strlen(polm_addr) < 10) {
+        fprintf(stderr, "Erro: carteira invalida\n"); return 1;
     }
 
     signal(SIGINT,  sig_handler);
