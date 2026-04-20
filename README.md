@@ -9,6 +9,27 @@
 
 ---
 
+## ⛏️ Como Minerar (Linux)
+
+**Não precisa compilar nada. Só baixar e rodar.**
+
+### Instalação em 3 comandos
+```bash
+wget https://github.com/proof-of-legacy/Proof-of-Legacy-Memory/releases/download/v3.0.0/polm-miner-linux-amd64
+chmod +x polm-miner-linux-amd64
+./polm-miner-linux-amd64 --wallet SUA_CARTEIRA_POLYGON
+```
+
+**Requisitos:** Ubuntu/Debian x64 · 8GB+ RAM · Sem GPU
+
+### Instalação automática (script)
+```bash
+wget -qO- https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/install.sh | bash
+```
+
+### Mineração via systemd (boot automático)
+O script `install.sh` oferece configuração automática como serviço.
+
 ## 🟢 Mainnet Live
 
 | | |
