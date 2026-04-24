@@ -17,8 +17,9 @@
 #include <time.h>
 #include <signal.h>
 #include <unistd.h>
+#ifndef _WIN32
 #include <sys/mman.h>
-#include <sys/mman.h>
+#endif
 #include <curl/curl.h>
 #include "polm_posma.h"
 
@@ -201,15 +202,28 @@ static void merge_to_hex(const uint8_t *merge, char *hex_out) {
 }
 
 
+#ifdef _WIN32
+#include "polm_crypto_compat.h"
+#else
 #include <openssl/sha.h>
+/* Linux helpers — equivalentes ao polm_crypto_compat.h */
+static inline const char* get_home_dir(void) {
+    const char *h = getenv("HOME");
+    return h ? h : ".";
+}
+static inline int read_random_bytes(uint8_t *buf, size_t len) {
+    FILE *f = fopen("/dev/urandom", "rb");
+    if (!f || fread(buf, 1, len, f) != len) { if(f) fclose(f); return 0; }
+    fclose(f); return 1;
+}
+#endif
 /* ── Geração de carteira POLM ─────────────────────────────── */
 static void generate_polm_wallet(char *addr_out, size_t addr_len) {
     uint8_t priv[32];
-    FILE *f = fopen("/dev/urandom", "rb");
-    if (!f || fread(priv, 1, 32, f) != 32) {
+    
+    if (!read_random_bytes(priv, 32)) {
         fprintf(stderr, "Erro ao gerar carteira\n"); exit(1);
     }
-    if (f) fclose(f);
     uint8_t hash[32];
     SHA256_CTX ctx;
     SHA256_Init(&ctx);
@@ -219,14 +233,14 @@ static void generate_polm_wallet(char *addr_out, size_t addr_len) {
     for (int i = 0; i < 16; i++)
         snprintf(addr_out + 4 + i*2, addr_len - 4 - i*2, "%02X", hash[i]);
     char wf_path[512];
-    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", get_home_dir());
     FILE *wf = fopen(wf_path, "w");
     if (wf) { fprintf(wf, "address=%s\n", addr_out); fclose(wf); }
 }
 
 static int load_polm_wallet(char *addr_out, size_t addr_len) {
     char wf_path[512];
-    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", get_home_dir());
     FILE *wf = fopen(wf_path, "r");
     if (!wf) return 0;
     char line[256];
@@ -242,6 +256,9 @@ static int load_polm_wallet(char *addr_out, size_t addr_len) {
 
 /* ── Main ─────────────────────────────────────────────────── */
 int main(int argc, char *argv[]) {
+#ifdef _WIN32
+    SetConsoleOutputCP(65001);
+#endif
     const char *polm_addr = NULL;
     const char *node_url  = "https://polm.com.br/api";
 
@@ -277,7 +294,7 @@ int main(int argc, char *argv[]) {
                     wallet_buf[strcspn(wallet_buf, "\n")] = 0;
                     polm_addr = wallet_buf;
                     char wf_path[512];
-                    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+                    snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", get_home_dir());
                     FILE *wf = fopen(wf_path, "w");
                     if (wf) { fprintf(wf, "address=%s\n", polm_addr); fclose(wf); }
                 }
@@ -294,7 +311,7 @@ int main(int argc, char *argv[]) {
             poly_buf[strcspn(poly_buf, "\n")] = 0;
             if (strlen(poly_buf) > 5) {
                 char wf_path[512];
-                snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", getenv("HOME")?getenv("HOME"):".");
+                snprintf(wf_path, sizeof(wf_path), "%s/.polm_wallet", get_home_dir());
                 FILE *wf = fopen(wf_path, "a");
                 if (wf) { fprintf(wf, "polygon=%s\n", poly_buf); fclose(wf); }
                 printf("  Polygon salvo: %s\n\n", poly_buf);

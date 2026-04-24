@@ -80,7 +80,7 @@ The Python miner measures **~900ns** for DDR4 — but that's interpreter overhea
 
 ```
 Python miner:  ~900ns  ← interpreter overhead
-C miner:       ~76ns   ← real DRAM latency (DDR4)
+C miner:       ~80-150ns ← real DRAM latency (DDR4, Xorshift anti-prefetch)
 ```
 
 Blocks mined with the C miner appear with **⚡** in the explorer.
@@ -140,7 +140,7 @@ sudo sysctl -w vm.nr_hugepages=256
   Huge Pages: ativado (TLB otimizado)
   Building DAG (seed: polm:0:... salt: epoch_0_...)  done
   Mining #38200  diff=2  reward=50.00 POLM
-  Block found! nonce=38442 hash=00efb234... lat=76.8ns
+  Block found! nonce=38442 hash=00efb234... lat=92.3ns
   ACCEPTED! Blocks=1 Earned=50.0 POLM
 ```
 

@@ -14,7 +14,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include "polm_crypto_compat.h"
+#else
 #include <openssl/evp.h>
+#endif
 
 /* ── BLAKE3 helper — usado APENAS no caminho PoSMA ──────────── */
 /* NOTA: Hash final do bloco continua usando SHA3-256 (posma_final_hash) */
@@ -110,16 +114,18 @@ void posma_calculate_path(const uint8_t *dag, uint64_t nonce,
         /* Endereço físico na DRAM — stride de 4KB garante cache miss */
         size_t byte_addr = current_idx * POSMA_STRIDE;
 
-        /* Lê 8 bytes do DAG neste endereço */
-        uint64_t val;
-        memcpy(&val, dag + byte_addr, 8);
+        /* Lê 8 bytes do DAG — volatile força acesso real à DRAM, sem cache */
+        volatile const uint64_t *ptr = (volatile const uint64_t *)(dag + byte_addr);
+        uint64_t val = *ptr;
 
         /* Armazena no merge_value */
         memcpy(result->merge_value + step * 8, &val, 8);
         result->indices[step] = current_idx;
 
-        /* Próximo índice: BLAKE3(current_idx || nonce || salt || step) */
-        current_idx = blake3_next_index(current_idx, nonce, salt, step, num_slots);
+        /* Próximo índice: depende do VALOR LIDO da RAM — derrota Hardware Prefetcher */
+        /* CPU não pode adivinhar o próximo endereço sem buscar o dado na DRAM real */
+        current_idx = ((val ^ (nonce * 0x9e3779b97f4a7c15ULL)) * 0x01000193ULL
+                       + (uint64_t)step * 0x517cc1b727220a95ULL) % num_slots;
     }
 }
 
