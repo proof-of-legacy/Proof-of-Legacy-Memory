@@ -1,6 +1,6 @@
 # ⛏ PoLM — Proof of Legacy Memory
 
-> The first RAM-latency-bound Proof-of-Work. Mine with any RAM. DDR2, DDR3, DDR4, DDR5 — every generation mines. Score = 1/latency. Physics can't be faked.
+> The first RAM-latency-bound Proof-of-Work. Mine with any RAM. DDR2, DDR3, DDR4, DDR5 — every generation mines. DAA LWMA adjusts difficulty automatically. Physics enforced via 32MB L3 Eviction Buffer — 133ns DRAM confirmed.
 
 [![Mainnet](https://img.shields.io/badge/mainnet-live-brightgreen)](https://polm.com.br/explorer)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -183,23 +183,28 @@ Claim fee: 0.5 MATIC
 
 ## 🧠 Algorithm
 
-```
-score = 1 / latency_ns
-```
+PoLM uses a **DAA LWMA** (Linear Weighted Moving Average) to target a 120-second block time.
+Difficulty adjusts automatically every block based on the last 144 blocks.
 
-No boost multiplier. No penalty. Pure physics.
+- **Faster RAM** → more nonces per second → finds valid hash faster
+- **Slower RAM** → fewer nonces per second → finds valid hash slower
+- Both are valid. The network adjusts difficulty to ensure fair block times.
 
-- **Slower RAM** → higher latency → higher score per step → valid block
-- **Faster RAM** → lower latency → more nonces per second → valid block
+Consensus relies solely on: **Block Hash Difficulty + Cryptographic Memory Proof (Merge Value)**.
+
+> `latency_ns` shown in the explorer is telemetry only — it does **not** affect consensus or rewards.
 
 ### Any RAM Mines
 
-| Generation | Avg Latency | Profile |
-|-----------|------------|---------|
-| DDR2 | ~3500–8000 ns | High latency → high score/step ✅ |
-| DDR3 | ~1500–4000 ns | Balanced latency profile ✅ |
-| DDR4 | ~900–1900 ns | More nonces per second ✅ |
-| DDR5 | ~500–900 ns | Highest nonce throughput ✅ |
+| Generation | Physical DRAM Latency (Anti-Prefetch L4) | Profile |
+|------------|------------------------------------------|---------|
+| DDR2 | ~250–400 ns | High latency ✅ |
+| DDR3 | ~150–250 ns | Balanced ✅ |
+| DDR4 | ~130–160 ns | Standard ✅ |
+| DDR5 | ~100–130 ns | Fastest ✅ |
+
+*Measured via native C miner with 32MB L3 Cache Eviction Buffer (benchmark: `clock_gettime`).*
+
 
 ### Why ASIC-Resistant?
 
