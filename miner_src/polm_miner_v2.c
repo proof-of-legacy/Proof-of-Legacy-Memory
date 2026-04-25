@@ -21,7 +21,7 @@
 #include <sys/mman.h>
 #endif
 #include <curl/curl.h>
-#include "polm_posma.h"
+#include "../core/polm_core.h"
 
 #define VERSION      "3.0.1"
 #define NONCE_MIN    100
@@ -408,14 +408,7 @@ int main(int argc, char *argv[]) {
             printf("done\n");
         }
 
-        /* Delta-T: respeitar 62s entre submits */
-        time_t now = time(NULL);
-        int dt = (int)(now - last_submitted);
-        if (last_submitted > 0 && dt < 62) {
-            int wait = 62 - dt;
-            printf("  Waiting %ds (Delta-T...\n", wait);
-            sleep(wait);
-        }
+        time_t now = time(NULL); /* Delta-T removido */
 
         printf("  Mining #%d  diff=%d  reward=%.2f POLM\n",
                height, difficulty, reward);

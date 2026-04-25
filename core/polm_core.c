@@ -9,8 +9,8 @@
  *   gcc -O2 -c polm_posma.c -o polm_posma.o -lssl -lcrypto
  */
 
-#include "polm_posma.h"
-#include "blake3.h"  /* BLAKE3 — 3.3x mais rápido que SHA3 no caminho PoSMA */
+#include "polm_core.h"
+#include "blake3/blake3.h"  /* BLAKE3 — 3.3x mais rápido que SHA3 no caminho PoSMA */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

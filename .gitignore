@@ -1,14 +1,21 @@
-*.db
-*.log
-*.bak
-*.pyc
+# Binários
+*.o
+*.a
+*.so
+*.exe
+miner/polm_miner_v2
+miner/polm_miner_v2_new
+miner/bench_posma
+libpolmcore.a
+libposma.so
+polm-miner-linux-amd64*
+backup-final/
+
+# Python
 __pycache__/
-venv/
-polm_settings.json
-polm_peers.json
-chain.json
-tsv_state.json
-polm.py
-polm_bridge_oracle.py
-polm_explorer.py
-temporal_sync.py
+*.pyc
+*.pyo
+
+# Temporários
+*.bak*
+*.tmp

@@ -9,8 +9,8 @@
  *   - Caminho: determinístico dado nonce+salt+dag_seed
  */
 
-#ifndef POLM_POSMA_H
-#define POLM_POSMA_H
+#ifndef POLM_CORE_H
+#define POLM_CORE_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -45,4 +45,4 @@ int posma_meets_target(const char *hash_hex, int difficulty);
 /* Inicializa eviction buffer 32MB para anti-prefetch nivel 4 */
 void posma_init_evict_buffer(void);
 void posma_evict_l3_cache(void);
-#endif /* POLM_POSMA_H */
+#endif /* POLM_CORE_H */

@@ -1,0 +1,42 @@
+name: Build Windows Miner
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          choco install mingw openssl curl -y
+          refreshenv
+
+      - name: Build polm_miner.exe
+        run: |
+          gcc -O2 -o polm_miner.exe `
+            miner_src/polm_miner_v2.c `
+            core/polm_core.c `
+            core/blake3/libblake3.a `
+            -Icore -Icore/blake3 `
+            -lcurl -lssl -lcrypto `
+            -lws2_32 -lwinmm -lm `
+            -DWIN32
+
+      - name: Generate SHA256
+        run: |
+          sha256sum polm_miner.exe > polm_miner.exe.sha256
+          cat polm_miner.exe.sha256
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: polm-miner-windows
+          path: |
+            polm_miner.exe
+            polm_miner.exe.sha256
