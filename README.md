@@ -80,7 +80,7 @@ The Python miner measures **~900ns** for DDR4 — but that's interpreter overhea
 
 ```
 Python miner:  ~900ns  ← interpreter overhead
-C miner:       ~80-150ns ← real DRAM latency (DDR4, Xorshift anti-prefetch)
+C miner:       ~133ns ← real DRAM latency (DDR4, L3 Cache Eviction anti-prefetch)
 ```
 
 Blocks mined with the C miner appear with **⚡** in the explorer.
@@ -118,9 +118,11 @@ ar rcs libblake3.a blake3.o blake3_dispatch.o blake3_portable.o \
     blake3_avx2_x86-64_unix.o blake3_avx512_x86-64_unix.o \
     blake3_sse41_x86-64_unix.o blake3_sse2_x86-64_unix.o
 
-# Build miner
-gcc -O3 -o polm_miner polm_miner_v2.c polm_posma.c \
-    -I BLAKE3/c libblake3.a \
+# Build miner (usando Makefile unificado)
+make miner
+# Ou manualmente:
+gcc -O2 -o polm_miner miner_src/polm_miner_v2.c core/polm_core.c \
+    core/blake3/libblake3.a -Icore -Icore/blake3 \
     -lssl -lcrypto -lcurl -lm
 ```
 
