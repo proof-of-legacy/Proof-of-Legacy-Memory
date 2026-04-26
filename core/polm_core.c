@@ -19,7 +19,7 @@
 #else
 #include <openssl/evp.h>
 
-#define EVICT_BUFFER_SIZE (32UL * 1024 * 1024)
+#define EVICT_BUFFER_SIZE (64UL * 1024 * 1024)
 static volatile uint64_t *_evict_buf = NULL;
 static size_t _evict_slots = 0;
 
@@ -27,7 +27,7 @@ void posma_evict_l3_cache(void) {
     posma_init_evict_buffer();
     if (!_evict_buf) return;
     volatile uint64_t sink = 0;
-    for (size_t ei = 0; ei < _evict_slots; ei += 8)
+    for (size_t ei = 0; ei < _evict_slots; ei += 1)
         sink ^= _evict_buf[ei];
     (void)sink;
 }
@@ -133,6 +133,7 @@ void posma_calculate_path(const uint8_t *dag, uint64_t nonce,
     uint64_t current_idx = blake3_start_index(nonce, salt, num_slots);
 
     uint64_t prev_val = nonce;
+    posma_evict_l3_cache();  /* flush L3 antes de cada prova */
     for (int step = 0; step < POSMA_STEPS; step++) {
         /* Endereço físico na DRAM — stride de 4KB garante cache miss */
         size_t base_addr = current_idx * POSMA_STRIDE;
