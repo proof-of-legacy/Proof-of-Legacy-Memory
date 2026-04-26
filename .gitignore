@@ -19,3 +19,13 @@ __pycache__/
 # Temporários
 *.bak*
 *.tmp
+backup-final/
+core/blake3/libblake3.a
+polm_chain.db
+polm_cheat.log
+polm_node.log
+polm_peers.json
+polm_settings.json
+polm_utxo.db
+miner/blake3.h
+miner/polm_crypto_compat.h
