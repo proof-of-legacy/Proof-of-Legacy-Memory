@@ -23,7 +23,7 @@ Unlike SHA-256 (compute-bound) or Ethash (VRAM bandwidth-bound), PoLM is **laten
 The score formula is:
 
 ```
-score = 1 / latency_ns
+score = 1.0  # fixed — not used in consensus
 ```
 
 No boost multiplier. No penalty. No artificial favoritism by RAM type. Every generation — DDR2, DDR3, DDR4, DDR5 — mines honestly based on its physical latency characteristics. Slower RAM scores higher per nonce; faster RAM compensates with higher nonce throughput. The network needs both.
@@ -78,7 +78,7 @@ Mining rewards are bridged to Polygon as an ERC-20 token (`0x79175931C54c9765E58
 | Score Formula | 1 / latency_ns |
 | DAG (Epoch 0) | 256 MB |
 | DAG Growth | doubles each epoch |
-| Walk Steps | 100,000 per nonce |
+| Walk Steps | 1,000 per nonce |
 | Max Threads | 4 per miner |
 | Min Transaction Fee | 0.0001 POLM |
 
@@ -111,9 +111,9 @@ DDR2·DDR3·DDR4·DDR5     ERC-20 POLM token
 ```
 1. Generate Memory DAG (256 MB in Epoch 0, seeded from epoch + prev_hash)
 2. Initialize hash from: prev_hash + miner_address + nonce
-3. Execute random memory walk (100,000 steps)
+3. Execute random memory walk (1,000 steps)
 4. Measure average access latency (ns)
-5. Compute score = 1 / latency_ns
+5. Compute score = 1.0  # fixed — not used in consensus
 6. Validate: block_hash must start with "0" × difficulty
 ```
 
@@ -123,13 +123,13 @@ DDR2·DDR3·DDR4·DDR5     ERC-20 POLM token
 h   = sha3_256(f"{prev_hash}:{address}:{nonce}".encode())
 pos = int.from_bytes(h[:8], 'little') % dag_size
 
-for step in range(100_000):
+for step in range(1_000):
     mem = DAG[pos : pos+32]           # random DRAM read
     h   = sha3_256(h + mem)           # hash chain
     pos = int.from_bytes(h[:8], 'little') % dag_size
 
-avg_latency = total_ns / 100_000
-score       = 1.0 / avg_latency
+avg_latency = total_ns / 1_000
+score       = 1.0  # fixed — telemetry only
 final_hash  = h
 ```
 
@@ -144,7 +144,7 @@ Properties:
 ## 6. Score Formula
 
 ```
-score = 1 / latency_ns
+score = 1.0  # fixed — not used in consensus
 ```
 
 This is the complete formula. No multipliers. No lookup tables. No penalties.
@@ -158,7 +158,7 @@ This is the complete formula. No multipliers. No lookup tables. No penalties.
 | DDR4 | ~1200 ns | lower | higher | more nonces |
 | DDR5 | ~600 ns | lowest | highest | maximum throughput |
 
-Slower RAM does more work per step. Faster RAM processes more steps per second. The network receives honest work from all generations.
+Faster RAM computes more nonces per second. Slower RAM computes fewer. DAA LWMA adjusts difficulty so all generations find blocks at a mathematically fair rate. Score is fixed at 1.0 for all blocks — latency_ns is telemetry only.
 
 ---
 
@@ -196,7 +196,7 @@ Every 100,000 blocks (~138 days at 2 min/block):
 - Minimum RAM requirement increases
 
 ```python
-epoch  = height // 100_000
+epoch  = height // 100_000  # 100k blocks per epoch
 reward = 50.0 / (2 ** epoch)
 ```
 
@@ -304,7 +304,7 @@ Mining rewards are bridged to Polygon automatically via an ECDSA oracle:
 | Oracle fraud | ECDSA signature required on every block registration |
 | Rug pull | Founder locked 5 years — enforced at consensus level |
 
-**ASIC resistance:** The gap between DDR2 (~3800 ns) and DDR5 (~600 ns) is ~6×. In SHA-256, ASICs are 100,000× faster than CPUs. PoLM's physical constraint means custom silicon has no useful advantage — DRAM latency cannot be engineered away.
+**ASIC resistance:** The gap between DDR2 (~300 ns) and DDR5 (~115 ns) is ~2.5× (native C miner with L3 Eviction Buffer)×. In SHA-256, ASICs are 100,000× faster than CPUs. PoLM's physical constraint means custom silicon has no useful advantage — DRAM latency cannot be engineered away.
 
 ---
 
@@ -445,7 +445,7 @@ The miner auto-updates on every run. On first run: generates 12-word BIP-39 wall
 PoLM introduces a fundamentally new class of Proof-of-Work grounded in DRAM physics. By making latency — not compute power — the bottleneck:
 
 1. **Any RAM mines** — DDR2 through DDR5, all generations participate honestly
-2. **No artificial rules** — score = 1/latency_ns, nothing else
+2. **No artificial rules** — DAA LWMA · 120s target, nothing else
 3. **ASIC-resistant by physics** — DRAM latency cannot be engineered away
 4. **Hardware evolution is built-in** — epochs force RAM upgrade cycles, creating a new industry by Epoch 7
 5. **Truly decentralized** — any PC with 4 GB+ RAM mines in Epoch 0

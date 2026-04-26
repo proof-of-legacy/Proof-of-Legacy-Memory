@@ -4,31 +4,34 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PoLM Roadmap — Proof of Legacy Memory</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #080b0f;
-  --bg2: #0d1117;
-  --bg3: #161b22;
-  --cyan: #00f5d4;
-  --amber: #f5a623;
-  --green: #39d353;
-  --purple: #a371f7;
-  --blue: #58a6ff;
-  --red: #ff4d4d;
-  --t1: #e8edf3;
-  --t2: #8b949e;
-  --t3: #484f58;
-  --border: #21262d;
+  --bg: #080c14;
+  --bg2: #0d1220;
+  --bg3: #111827;
+  --bg4: #161f30;
+  --border: rgba(99,120,200,0.13);
+  --border-bright: rgba(99,120,200,0.32);
+  --blue: #4f8ef7;
+  --cyan: #38bdf8;
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --orange: #fb923c;
+  --purple: #a78bfa;
+  --red: #f87171;
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-faint: #475569;
   --mono: 'JetBrains Mono', monospace;
-  --sans: 'Syne', sans-serif;
+  --sans: 'Sora', sans-serif;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
 
 body {
   background: var(--bg);
-  color: var(--t1);
+  color: var(--text);
   font-family: var(--sans);
   min-height: 100vh;
   padding: 48px 24px;
@@ -40,8 +43,8 @@ body::before {
   position:fixed;
   inset:0;
   background-image:
-    linear-gradient(rgba(0,245,212,.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,245,212,.02) 1px, transparent 1px);
+    linear-gradient(rgba(79,142,247,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79,142,247,0.025) 1px, transparent 1px);
   background-size: 48px 48px;
   pointer-events:none;
   z-index:0;
@@ -76,7 +79,7 @@ body::before {
   letter-spacing: -.03em;
   line-height: 1;
   margin-bottom: 16px;
-  background: linear-gradient(135deg, var(--t1) 30%, var(--cyan));
+  background: linear-gradient(135deg, var(--text) 30%, var(--cyan));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -84,7 +87,7 @@ body::before {
 .subtitle {
   font-family: var(--mono);
   font-size: .82rem;
-  color: var(--t2);
+  color: var(--text-dim);
   letter-spacing: .05em;
 }
 
@@ -104,7 +107,7 @@ body::before {
   background: linear-gradient(180deg,
     var(--cyan) 0%,
     var(--green) 30%,
-    var(--amber) 60%,
+    var(--yellow) 60%,
     var(--purple) 80%,
     rgba(163,113,247,.2) 100%
   );
@@ -122,6 +125,8 @@ body::before {
 .phase:nth-child(3) { animation-delay: .3s; }
 .phase:nth-child(4) { animation-delay: .4s; }
 .phase:nth-child(5) { animation-delay: .5s; }
+.phase:nth-child(6) { animation-delay: .6s; }
+.phase:nth-child(7) { animation-delay: .7s; }
 
 @keyframes fadeUp {
   from { opacity:0; transform: translateY(20px); }
@@ -141,9 +146,9 @@ body::before {
 
 .phase.done .phase-dot      { border-color: var(--green);  background: var(--green);  box-shadow: 0 0 12px var(--green); }
 .phase.current .phase-dot   { border-color: var(--cyan);   background: var(--cyan);   box-shadow: 0 0 16px var(--cyan); animation: pulse 2s infinite; }
-.phase.soon .phase-dot      { border-color: var(--amber);  background: transparent; }
+.phase.soon .phase-dot      { border-color: var(--yellow);  background: transparent; }
 .phase.future .phase-dot    { border-color: var(--purple); background: transparent; }
-.phase.longterm .phase-dot  { border-color: var(--t3);     background: transparent; }
+.phase.longterm .phase-dot  { border-color: var(--text-faint);     background: transparent; }
 
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 8px var(--cyan); }
@@ -160,13 +165,13 @@ body::before {
   transition: border-color .2s;
 }
 
-.phase-card:hover { border-color: var(--t3); }
+.phase-card:hover { border-color: var(--text-faint); }
 
 .phase.done .phase-card    { border-left: 3px solid var(--green); }
 .phase.current .phase-card { border-left: 3px solid var(--cyan); }
-.phase.soon .phase-card    { border-left: 3px solid var(--amber); }
+.phase.soon .phase-card    { border-left: 3px solid var(--yellow); }
 .phase.future .phase-card  { border-left: 3px solid var(--purple); }
-.phase.longterm .phase-card{ border-left: 3px solid var(--t3); }
+.phase.longterm .phase-card{ border-left: 3px solid var(--text-faint); }
 
 .phase-card::before {
   content: '';
@@ -176,7 +181,7 @@ body::before {
 }
 .phase.done .phase-card::before    { background: linear-gradient(90deg, var(--green), transparent); }
 .phase.current .phase-card::before { background: linear-gradient(90deg, var(--cyan), transparent); }
-.phase.soon .phase-card::before    { background: linear-gradient(90deg, var(--amber), transparent); }
+.phase.soon .phase-card::before    { background: linear-gradient(90deg, var(--yellow), transparent); }
 .phase.future .phase-card::before  { background: linear-gradient(90deg, var(--purple), transparent); }
 
 .phase-header {
@@ -190,7 +195,7 @@ body::before {
 .phase-num {
   font-family: var(--mono);
   font-size: .65rem;
-  color: var(--t3);
+  color: var(--text-faint);
   letter-spacing: .15em;
   text-transform: uppercase;
 }
@@ -213,15 +218,15 @@ body::before {
 }
 
 .badge-done    { color: var(--green);  border-color: rgba(57,211,83,.3);   background: rgba(57,211,83,.08); }
-.badge-current { color: var(--cyan);   border-color: rgba(0,245,212,.3);   background: rgba(0,245,212,.08); }
-.badge-soon    { color: var(--amber);  border-color: rgba(245,166,35,.3);  background: rgba(245,166,35,.08); }
+.badge-current { color: var(--cyan);   border-color: rgba(56,189,248,.3);   background: rgba(56,189,248,.08); }
+.badge-soon    { color: var(--yellow);  border-color: rgba(245,166,35,.3);  background: rgba(245,166,35,.08); }
 .badge-future  { color: var(--purple); border-color: rgba(163,113,247,.3); background: rgba(163,113,247,.08); }
-.badge-longterm{ color: var(--t2);     border-color: var(--border);        background: transparent; }
+.badge-longterm{ color: var(--text-dim);     border-color: var(--border);        background: transparent; }
 
 .phase-period {
   font-family: var(--mono);
   font-size: .72rem;
-  color: var(--t3);
+  color: var(--text-faint);
   margin-bottom: 16px;
   letter-spacing: .05em;
 }
@@ -246,10 +251,89 @@ body::before {
   margin-top: 1px;
 }
 
-.item-text { color: var(--t1); }
-.item-text .dim { color: var(--t2); font-size: .82rem; }
+.item-text { color: var(--text); }
+.item-text .dim { color: var(--text-dim); font-size: .82rem; }
 
-/* Legend */
+.phase.expansion .phase-dot  { border-color: var(--orange); background: var(--orange); box-shadow: 0 0 14px var(--orange); }
+.phase.expansion .phase-card { border-left: 3px solid var(--orange); }
+.phase.expansion .phase-card::before { background: linear-gradient(90deg, var(--orange), transparent); }
+
+/* Protocol cards inside expansion */
+.proto-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.proto-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  border-left: 3px solid;
+}
+
+.proto-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.proto-num {
+  font-family: var(--mono);
+  font-size: .62rem;
+  color: var(--text-faint);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.proto-name {
+  font-size: .95rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.proto-tag {
+  font-family: var(--mono);
+  font-size: .6rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  border: 1px solid;
+}
+
+.proto-desc {
+  font-size: .82rem;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.proto-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.proto-item {
+  font-size: .8rem;
+  color: var(--text-dim);
+  padding-left: 12px;
+  position: relative;
+  line-height: 1.4;
+}
+
+.proto-item::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  font-weight: 700;
+}
 .legend {
   display: flex;
   gap: 20px;
@@ -266,7 +350,7 @@ body::before {
   gap: 8px;
   font-family: var(--mono);
   font-size: .72rem;
-  color: var(--t2);
+  color: var(--text-dim);
 }
 
 .legend-dot {
@@ -281,11 +365,11 @@ body::before {
   margin-top: 32px;
   font-family: var(--mono);
   font-size: .72rem;
-  color: var(--t3);
+  color: var(--text-faint);
   line-height: 2;
 }
 
-.footer a { color: var(--t2); text-decoration: none; }
+.footer a { color: var(--text-dim); text-decoration: none; }
 .footer a:hover { color: var(--cyan); }
 </style>
 </head>
@@ -340,6 +424,12 @@ body::before {
           <div class="item"><span class="item-icon">✅</span><span class="item-text">Registro de EVM address automático no primeiro start</span></div>
           <div class="item"><span class="item-icon">✅</span><span class="item-text">CPU auto-detectado — exibido no leaderboard do explorer</span></div>
           <div class="item"><span class="item-icon">✅</span><span class="item-text">Campanha de divulgação — Twitter, Discord, WhatsApp, Facebook</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">CLI miner v1.5.4 — auto-update, DDR3 fix, daemon mode</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Bitcointalk ANN — Mining (Altcoins)</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Telegram — t.me/polm2026</span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Email <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="4e2d21203a2f2d3a0e3e212223602d2123602c3c">[email&#160;protected]</a></span></div>
+          <div class="item"><span class="item-icon">✅</span><span class="item-text">Minerstat submission</span></div>
+          <div class="item"><span class="item-icon">🔄</span><span class="item-text">Pool de mineração — computadores lentos</span></div>
           <div class="item"><span class="item-icon">🔄</span><span class="item-text">Liquidez inicial no QuickSwap — par POLM/MATIC</span></div>
           <div class="item"><span class="item-icon">🔄</span><span class="item-text">Submissão CoinGecko e CoinMarketCap</span></div>
         </div>
@@ -359,10 +449,54 @@ body::before {
         <div class="items">
           <div class="item"><span class="item-icon">🔜</span><span class="item-text">Listagem em DEX — QuickSwap, SushiSwap (Polygon)</span></div>
           <div class="item"><span class="item-icon">🔜</span><span class="item-text">Minerador macOS — suporte completo ao ecossistema Apple</span></div>
-          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Pool de mineração — vários mineradores, recompensa compartilhada</span></div>
           <div class="item"><span class="item-icon">🔜</span><span class="item-text">Dashboard pessoal — minerador acompanha seus blocos e ganhos</span></div>
           <div class="item"><span class="item-icon">🔜</span><span class="item-text">Epoch 1 — DAG 512MB, recompensa 25 POLM/bloco</span></div>
           <div class="item"><span class="item-icon">🔜</span><span class="item-text">Nós públicos adicionais — maior descentralização da rede</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 03: Protocol Maturity -->
+    <div class="phase soon">
+      <div class="phase-dot"></div>
+      <div class="phase-card">
+        <div class="phase-header">
+          <span class="phase-num">Phase 03</span>
+          <span class="phase-title">Protocol Maturity &amp; Scaling</span>
+          <span class="phase-badge" style="border-color:var(--yellow);color:var(--yellow)">⏳ Em breve</span>
+        </div>
+        <div class="phase-period">📅 Q3 2026 — Julho / Setembro 2026</div>
+        <div class="items">
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Epoch 1 Transition — DAG increases to 512MB, reward halves to 25 POLM (Max-Q pre-loading active)</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Whitepaper v3.0 — Native C consensus, DAA LWMA, Anti-Prefetch Level 4 (133ns benchmark)</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Mining Pools — PPLNS protocol for slower hardware to compete fairly</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">Mobile Dashboard — Track miner status and Polygon claims via mobile web</span></div>
+          <div class="item"><span class="item-icon">🔜</span><span class="item-text">CEX / DEX Listing — QuickSwap (Polygon), CoinGecko, CoinMarketCap</span></div>
+        </div>
+      </div>
+    </div>
+
+        <div class="proto-grid">
+
+          <!-- Protocol 3: EWC -->
+          <div class="proto-card" style="border-left-color:var(--green)">
+            <div class="proto-header">
+              <span class="proto-num">Protocolo 3</span>
+              <span class="proto-name" style="color:var(--green)">Epoch 1 Transition</span>
+              <span class="proto-tag" style="border-color:var(--green);color:var(--green)">ESG · Semana 2</span>
+            </div>
+            <div class="proto-desc">Token ERC-20 na Polygon mintado proporcionalmente à mineração DDR2/DDR3. 1 EWC = 1 kg de e-waste eletrônico verificado on-chain. Empresas compram e queimam para relatórios ESG.</div>
+            <div class="proto-items">
+              <div class="proto-item" style="color:var(--text)">DDR2 = 3.0× · DDR3 = 2.0× · DDR4 = 0.3× · DDR5 = 0.0× (não gera crédito)</div>
+              <div class="proto-item">Max supply: 21.000.000 EWC · 1 EWC = 1 kg e-waste verificado</div>
+              <div class="proto-item">Burn para uso em relatórios ESG corporativos — prova criptográfica de reutilização</div>
+              <div class="proto-item">Oracle distribui EWC a cada 1.000 blocos via <code style="font-family:var(--mono);font-size:.75rem">ewc_processor.py</code></div>
+              <div class="proto-item">Nova página: polm.com.br/ewc — painel ao vivo, calculadora ESG, leaderboard</div>
+            </div>
+          </div>
+
+        </div>
+
         </div>
       </div>
     </div>
@@ -411,7 +545,6 @@ body::before {
 
   </div>
 
-  <!-- Legend -->
   <div class="legend">
     <div class="legend-item">
       <div class="legend-dot" style="background:var(--green)"></div>
@@ -422,7 +555,11 @@ body::before {
       Em andamento
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:var(--amber); border-radius:50%"></div>
+      <div class="legend-dot" style="background:var(--orange)"></div>
+      Protocol Maturity
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:var(--yellow); border-radius:50%"></div>
       Em breve
     </div>
     <div class="legend-item">
@@ -430,7 +567,7 @@ body::before {
       Futuro
     </div>
     <div class="legend-item">
-      <div class="legend-dot" style="background:var(--t3); border-radius:50%"></div>
+      <div class="legend-dot" style="background:var(--text-faint); border-radius:50%"></div>
       Longo prazo
     </div>
   </div>
@@ -439,13 +576,8 @@ body::before {
     <a href="https://polm.com.br">polm.com.br</a> ·
     <a href="https://explorer.polm.com.br">explorer</a> ·
     <a href="https://github.com/proof-of-legacy/Proof-of-Legacy-Memory">github</a> ·
-    <a href="https://twitter.com/polm2026">@polm2026</a>
+    <a href="https://x.com/polmram">@polmram</a>
     <br>
     Mine with any RAM. Latency is truth. 🧠⛏
     <br>
-    <span style="color:var(--t3)">© 2026 Aluísio Fernandes (Aluminium) · MIT License</span>
-  </div>
-
-</div>
-</body>
-</html>
+    <s
