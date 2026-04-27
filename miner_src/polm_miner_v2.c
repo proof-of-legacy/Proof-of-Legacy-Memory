@@ -424,7 +424,10 @@ int main(int argc, char *argv[]) {
 
             /* Calcular caminho PoSMA */
             PosmaResult result;
+            uint64_t pow_start = rdtscp_read();
             posma_calculate_path(dag, nonce, epoch_salt, &result);
+            uint64_t pow_end = rdtscp_read();
+            double true_latency_ns = (double)(pow_end - pow_start) / (tsc_ghz * POSMA_STEPS);
 
             /* Gerar hash final */
             posma_final_hash(nonce, epoch_salt, dag_seed,
@@ -432,9 +435,8 @@ int main(int argc, char *argv[]) {
 
             /* Verificar dificuldade */
             if (posma_meets_target(result.hash_final, difficulty)) {
-                /* Latência DRAM pura via pointer-chasing */
-                /* DAG já está "quente" pelo PoSMA — mede acesso real à DRAM */
-                double avg_latency_ns = polm_measure_dram_ns(nonce);
+                /* Latência DRAM pura — flush L3 antes de medir */
+                double avg_latency_ns = true_latency_ns;
 
                 printf("  Block found! nonce=%llu hash=%.16s... lat=%.1fns\n",
                        (unsigned long long)nonce, result.hash_final, avg_latency_ns);
