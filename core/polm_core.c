@@ -119,42 +119,45 @@ void posma_generate_dag(uint8_t *dag, const char *seed, const char *epoch_salt) 
 /* ── PoSMA Path Calculation ───────────────────────────────── */
 void posma_calculate_path(const uint8_t *dag, uint64_t nonce,
                           const char *salt, PosmaResult *result) {
-    /*
-     * Caminho DETERMINÍSTICO dado nonce+salt.
-     * Fórmula: Next_Index = SHA3(Current_Index || Nonce || Salt) % (DAG_Size / Stride)
-     *
-     * STRIDE = 4096 bytes — garante cache miss na DRAM real.
-     * Cada step lê 8 bytes do DAG no índice calculado.
-     */
-    size_t num_slots = DAG_SIZE_BYTES / POSMA_STRIDE;  /* 65536 slots de 4KB */
-    /* hash_buf e hash_input removidos — BLAKE3 usa API própria */
-
-    /* Índice inicial: BLAKE3(nonce || salt || "start") — 3.3x mais rápido que SHA3 */
+    size_t num_slots = DAG_SIZE_BYTES / POSMA_STRIDE;
     uint64_t current_idx = blake3_start_index(nonce, salt, num_slots);
-
     uint64_t prev_val = nonce;
-    posma_evict_l3_cache();  /* flush L3 antes de cada prova */
-    for (int step = 0; step < POSMA_STEPS; step++) {
-        /* Endereço físico na DRAM — stride de 4KB garante cache miss */
-        size_t base_addr = current_idx * POSMA_STRIDE;
-        uint64_t trash = 0;
-        if (_evict_buf) {
-            size_t evict_idx = ((size_t)step * 8) % _evict_slots;
-            trash = _evict_buf[evict_idx];
-            __asm__ volatile("" : "+r"(trash));
-        }
-        uint16_t _ob = (uint16_t)(((prev_val ^ trash) >> 24) & 0xFFFF); size_t offset = (size_t)(((uint64_t)_ob * (POSMA_STRIDE - 8)) >> 16);
 
-        /* Lê 8 bytes do DAG — volatile força acesso real à DRAM, sem cache */
+    for (int step = 0; step < POSMA_STEPS; step++) {
+        /* Eviction a cada 100 steps — streaming sequencial de 32MB.
+         * L3 do i5-14400F = 24MB. Working set PoSMA = 4MB.
+         * Ler 32MB sequencial satura os fill buffers e forca o LRU
+         * a descartar as linhas do DAG — proximo acesso vai na DDR4 real. */
+        if (_evict_buf && step > 0 && step % 100 == 0) {
+            volatile uint64_t sink = 0;
+            /* Streaming sequencial de todo o buffer (64MB) em blocos de 64 bytes */
+            /* Le apenas metade (32MB) para nao demorar demais por step */
+            size_t half_slots = _evict_slots / 2;
+            for (size_t e = 0; e < half_slots; e += 8) {
+                sink ^= _evict_buf[e];
+                sink ^= _evict_buf[e+1];
+                sink ^= _evict_buf[e+2];
+                sink ^= _evict_buf[e+3];
+                sink ^= _evict_buf[e+4];
+                sink ^= _evict_buf[e+5];
+                sink ^= _evict_buf[e+6];
+                sink ^= _evict_buf[e+7];
+            }
+            (void)sink;
+        }
+
+        size_t base_addr = current_idx * POSMA_STRIDE;
+        uint16_t _ob = (uint16_t)(((prev_val) >> 24) & 0xFFFF);
+        size_t offset = (size_t)(((uint64_t)_ob * (POSMA_STRIDE - 8)) >> 16);
+
+        /* Lê 8 bytes do DAG — volatile força acesso real à DRAM */
         volatile const uint64_t *ptr = (volatile const uint64_t *)(dag + base_addr + offset);
         uint64_t val = *ptr;
 
-        /* Armazena no merge_value */
         memcpy(result->merge_value + step * 8, &val, 8);
         result->indices[step] = current_idx;
 
-        /* Próximo índice: depende do VALOR LIDO da RAM — derrota Hardware Prefetcher */
-        /* CPU não pode adivinhar o próximo endereço sem buscar o dado na DRAM real */
+        /* Próximo índice depende do valor lido — derrota Hardware Prefetcher */
         current_idx = ((val ^ (nonce * 0x9e3779b97f4a7c15ULL)) * 0x01000193ULL
                        + (uint64_t)step * 0x517cc1b727220a95ULL) % num_slots;
         prev_val = val;
