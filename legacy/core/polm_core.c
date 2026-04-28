@@ -153,6 +153,9 @@ void posma_calculate_path(const uint8_t *dag, uint64_t nonce,
         /* Lê 8 bytes do DAG — volatile força acesso real à DRAM */
         volatile const uint64_t *ptr = (volatile const uint64_t *)(dag + base_addr + offset);
         uint64_t val = *ptr;
+        /* Dummy dependency: força CPU a esperar leitura antes de calcular próximo índice */
+        val = val * 0x5bd1e995ULL + 1;
+        __asm__ volatile("" : "+r"(val));
 
         memcpy(result->merge_value + step * 8, &val, 8);
         result->indices[step] = current_idx;

@@ -16,7 +16,7 @@
 #include <stddef.h>
 
 #define POSMA_STEPS        10000
-#define POSMA_STRIDE       4096      /* bytes — força acesso à DRAM */
+#define POSMA_STRIDE       4112      /* bytes — força acesso à DRAM */
 #define DAG_SIZE_MB        256
 #define DAG_SIZE_BYTES     ((size_t)DAG_SIZE_MB * 1024 * 1024)
 #define MERGE_VALUE_BYTES  (POSMA_STEPS * 8)   /* 8 bytes por passo = 8000 bytes */
