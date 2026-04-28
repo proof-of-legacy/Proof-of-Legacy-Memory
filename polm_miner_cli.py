@@ -268,7 +268,7 @@ OS_NAME  = detect_os()
 check_update()
 
 print("=" * 52)
-print(f"  PoLM Miner CLI v{VERSION} — score = 1/latency_ns")
+print(f"  PoLM Miner CLI v{VERSION} — score = 1.0 fixed")
 print("  Any RAM mines. Physics can't be faked.")
 print("=" * 52)
 print()
