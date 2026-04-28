@@ -408,7 +408,7 @@ while True:
                         break
                 except Exception:
                     pass
-                print(f"\n  Block found! nonce={nonce} hash={block_hash[:16]}...")
+                print(f"\n  Block found! nonce={nonce} hash={block_hash[:16]}... lat={lat:.0f}ns")
                 bd = {
                     "height": height, "prev_hash": prev_hash,
                     "timestamp": ts, "nonce": nonce, "miner_id": polm_addr,
