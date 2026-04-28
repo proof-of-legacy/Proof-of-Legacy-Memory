@@ -29,3 +29,9 @@ polm_settings.json
 polm_utxo.db
 miner/blake3.h
 miner/polm_crypto_compat.h
+
+# Legacy C miner (archived)
+:USERPROFILEpolm/
+polm-miner-linux-amd64.1
+polm-miner-linux-amd64.2
+polm-miner-linux-amd64.3
