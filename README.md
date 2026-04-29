@@ -52,14 +52,6 @@ python miner.py
 
 > ⚠️ Always `cd` into the folder before running on Windows.
 
-### Automatic install (Linux)
-
-```bash
-wget -qO- https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/install.sh | bash
-```
-
-The miner **auto-updates** on every run. On first run: generates a 12-word BIP-39 wallet, registers your Polygon wallet, and starts mining immediately.
-
 **Requirements:** Python 3.8+ · 4 GB+ RAM · No GPU needed
 
 ---
