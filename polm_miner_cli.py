@@ -16,7 +16,7 @@ except (IOError, OSError):
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.6"
+VERSION    = "1.5.7"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
@@ -360,7 +360,8 @@ epoch  = int(work.get("epoch", 0))
 diff   = int(work.get("difficulty", 2))
 reward = float(work.get("reward", 50.0))
 height = int(work.get("height", 0))
-dag    = build_dag(bytes.fromhex(prev_hash[:64].ljust(64,"0")))
+dag_mb = int(work.get("dag_size_mb", 256))
+dag    = build_dag(bytes.fromhex(prev_hash[:64].ljust(64,"0")), dag_mb)
 blocks = 0; earned = 0.0
 
 print("  Mining started! Press Ctrl+C to stop.")
@@ -380,10 +381,12 @@ while True:
         if new_ph != prev_hash:
             prev_hash = new_ph
             # Only rebuild DAG if epoch changed (not every block!)
-            new_epoch = int(work.get("epoch", 0))
-            if new_epoch != epoch or dag is None:
-                dag = build_dag(bytes.fromhex(prev_hash[:64].ljust(64,"0")))
-            epoch = new_epoch
+            nmb = int(work.get("dag_size_mb", dag_mb))
+            if nmb != dag_mb:
+                print("  [EPOCH] DAG: %dMB -> %dMB" % (dag_mb, nmb))
+                dag_mb = nmb; dag = None
+            if dag is None:
+                dag = build_dag(bytes.fromhex(prev_hash[:64].ljust(64,"0")), dag_mb)
 
         nonce = 0
         while True:
