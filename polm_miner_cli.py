@@ -16,7 +16,7 @@ except (IOError, OSError):
 
 NODE_URL   = "https://polm.com.br/api"
 MINER_URL  = "https://raw.githubusercontent.com/proof-of-legacy/Proof-of-Legacy-Memory/main/polm_miner_cli.py"
-VERSION    = "1.5.7"
+VERSION    = "1.5.8"
 
 def check_update():
     """Auto-update: checks GitHub for newer version and restarts if found"""
@@ -361,6 +361,7 @@ diff   = int(work.get("difficulty", 2))
 reward = float(work.get("reward", 50.0))
 height = int(work.get("height", 0))
 dag_mb = int(work.get("dag_size_mb", 256))
+_last_upd_check = time.time()   # auto-update periodico
 dag    = build_dag(bytes.fromhex(prev_hash[:64].ljust(64,"0")), dag_mb)
 blocks = 0; earned = 0.0
 
@@ -371,6 +372,11 @@ while True:
     try:
         work = get_work()
         if not work: time.sleep(5); continue
+        # checa atualizacao a cada 30 min — miners que ficam dias
+        # ligados nunca reiniciam e ficariam com DAG desatualizado
+        if time.time() - _last_upd_check > 1800:
+            _last_upd_check = time.time()
+            check_update()
 
         new_ph = work.get("prev_hash", "")
         diff   = int(work.get("difficulty", 2))
